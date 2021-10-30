@@ -1,20 +1,9 @@
 /* eslint-disable no-console */
 
-const dotenv = require('dotenv');
-
+import dotenv from 'dotenv';
 dotenv.config();
 
-const app =
-  process.env.NODE_ENV === 'production'
-    ? require('./serverProduction')
-    : require('./serverDevelopment');
+import socket from '../server/core/socket';
 
 const { PORT } = process.env;
-
-app.listen(PORT, (error: Error) => {
-  if (error) {
-    console.log(error);
-  } else {
-    console.info('🌎  Server is listening on port %s.', PORT);
-  }
-});
+socket.start(PORT ? parseInt(PORT) : 8080);
