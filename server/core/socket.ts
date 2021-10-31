@@ -2,21 +2,48 @@ import dgram, { Socket as SocketType, RemoteInfo } from 'dgram';
 
 class Socket {
   socket: SocketType;
+  onMessageCallback: (message: string, senderInfo: RemoteInfo) => void;
   constructor() {
     this.socket = dgram.createSocket('udp4');
+    this.onMessageCallback = () => {};
+  }
+
+  setMessageCallback(
+    _onMessageCallback: (message: string, senderInfo: RemoteInfo) => void,
+  ) {
+    this.onMessageCallback = _onMessageCallback;
+  }
+
+  sendMessage(message: string, remoteInfo: RemoteInfo) {
+    this.socket.send(
+      message,
+      remoteInfo.port,
+      remoteInfo.address,
+      (error: any) => {
+        if (!error) {
+          return;
+        }
+        console.error(error);
+      },
+    );
+  }
+
+  onConnect() {
+    console.log('New connection');
   }
 
   onMessage(buffer: Buffer, senderInfo: RemoteInfo) {
     const message = buffer.toString();
-    console.log(`${message} by ${senderInfo}`);
+    this.onMessageCallback(message, senderInfo);
   }
 
   start(port: number) {
     this.socket.on('listening', () => {
       const { address, port } = this.socket.address();
-      console.log(`Server listening on ${address}:${port}`);
+      console.log(`UDP server listening on ${address}:${port}`);
     });
-    this.socket.on('message', this.onMessage);
+    this.socket.on('connect', this.onConnect.bind(this));
+    this.socket.on('message', this.onMessage.bind(this));
     this.socket.bind(port);
   }
 }

@@ -1,17 +1,19 @@
 /**
- * @api {POST} /example/hey POST example
- * @apiName Hey exaple
- * @apiGroup Example
+ * @api {POST} /auth/login POST Login
+ * @apiName Login
+ * @apiGroup Auth
  * @apiVersion 0.0.1
  *
- * @apiParam {String} Example Example's body string
+ * @apiParam {String} login User's data
+ * @apiParam {String} password User's password
  * @apiParamExample {json} Request-example:
  * {
- *     "example": "Test"
+ *     "login": "Test",
+ *     "password": "Test"
  * }
- * @apiSuccess (200) {String} data Hey.
+ * @apiSuccess (200) {String} data Authorization ID.
  * @apiSuccessExample {json} Success-Response:
-    { "data": "Hey!" }
+    { "data": "dasdasd-123123-asdf-xcvz-" }
  * @apiError (400) {String} msg Error message.
  * @apiErrorExample {json} Error-Response:
     { "data": "example is missing or is not correctly formatted." }
