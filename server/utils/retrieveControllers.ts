@@ -5,7 +5,7 @@
 import path from 'path';
 import fs from 'fs';
 import logger from 'log-champ';
-import { IModuleDictionary } from '../interfaces/common';
+import { IModuleDictionary } from '../interfaces';
 
 /**
  * Retrieve controllers

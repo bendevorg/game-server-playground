@@ -27,10 +27,13 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^10.0.0",
-    "log-champ": "2.0.2"
+    "log-champ": "2.0.2",
+    "node-cache": "5.1.2",
+    "uuid4": "2.0.2"
   },
   "devDependencies": {
     "@types/node": "16.4.7",
+    "@types/uuid4": "2.0.0",
     "@typescript-eslint/eslint-plugin": "4.28.5",
     "@typescript-eslint/parser": "4.28.5",
     "chai": "4.3.4",

@@ -5,7 +5,7 @@
 import fs, { Stats } from 'fs';
 import path from 'path';
 import readline from 'readline';
-import { IStringDictionary } from '../server/interfaces/common';
+import { IStringDictionary } from '../server/interfaces';
 
 const filename = '.env';
 const file = path.resolve(`${process.cwd()}/${filename}`);

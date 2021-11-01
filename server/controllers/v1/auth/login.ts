@@ -21,9 +21,25 @@
  */
 
 import { Request, Response } from 'express';
+import uuid4 from 'uuid4';
+import generateSnapshot from '../../../controllers/generateSnapshot';
+import cache from '../../../utils/cache';
+import { Player } from '../../../interfaces';
 
-export default (_req: Request, res: Response) => {
-  return res.status(200).json({
-    msg: 'Hey',
-  });
+export default (req: Request, res: Response) => {
+  // TODO: Login will return the current game snapshot
+  // In the future this info will be returned by the select character or something like that
+
+  const id = uuid4();
+  const { ip } = req;
+  // TODO: Get from cache -> redis -> database
+  const player: Player | undefined = cache.get<Player>(id);
+  cache.set(
+    id,
+    player !== undefined
+      ? { ...player, ip }
+      : { ip, positionX: 0, positionY: 0.5, positionZ: 0 },
+  );
+  const snapshot = generateSnapshot(id);
+  return res.status(200).json(snapshot);
 };

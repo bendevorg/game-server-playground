@@ -11,7 +11,7 @@ const { PORT } = process.env;
 const app = express();
 app.use('/', router);
 
-app.listen(PORT, () => {
+app.listen(PORT ? parseInt(PORT) : 8080, '0.0.0.0', () => {
   console.info('🌎  HTTP server is listening on port %s.', PORT);
 });
 socket.start(PORT ? parseInt(PORT) : 8080);

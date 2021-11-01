@@ -2,7 +2,7 @@ import joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 
 const schema = joi.object().keys({
-  login: joi.string().required(),
+  username: joi.string().required(),
   password: joi.string().required(),
 });
 
