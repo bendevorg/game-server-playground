@@ -3,4 +3,5 @@ export default interface Player {
   positionX: number;
   positionY: number;
   positionZ: number;
+  lastUpdate: Date;
 }

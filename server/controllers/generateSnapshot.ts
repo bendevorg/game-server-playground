@@ -1,5 +1,6 @@
 import { Snapshot, Player } from '../interfaces';
 import cache from '../utils/cache';
+import omit from '../utils/omit';
 
 export default (id: string): Snapshot | null => {
   // TODO: This should get things from cache -> redis -> database
@@ -7,10 +8,10 @@ export default (id: string): Snapshot | null => {
   if (!player) {
     return null;
   }
-  const { ['ip']: omitted, ...rest } = player;
+  const publicPlayer = omit(player, ['ip', 'lastUpdate']);
   return {
     id,
-    player: rest,
+    player: publicPlayer,
     timestamp: new Date().toTimeString(),
   };
 };

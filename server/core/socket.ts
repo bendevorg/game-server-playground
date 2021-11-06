@@ -2,14 +2,14 @@ import dgram, { Socket as SocketType, RemoteInfo } from 'dgram';
 
 class Socket {
   socket: SocketType;
-  onMessageCallback: (message: string, senderInfo: RemoteInfo) => void;
+  onMessageCallback: (buffer: Buffer, senderInfo: RemoteInfo) => void;
   constructor() {
     this.socket = dgram.createSocket('udp4');
     this.onMessageCallback = () => {};
   }
 
   setMessageCallback(
-    _onMessageCallback: (message: string, senderInfo: RemoteInfo) => void,
+    _onMessageCallback: (buffer: Buffer, senderInfo: RemoteInfo) => void,
   ) {
     this.onMessageCallback = _onMessageCallback;
   }
@@ -33,8 +33,7 @@ class Socket {
   }
 
   onMessage(buffer: Buffer, senderInfo: RemoteInfo) {
-    const message = buffer.toString();
-    this.onMessageCallback(message, senderInfo);
+    this.onMessageCallback(buffer, senderInfo);
   }
 
   start(port: number) {
