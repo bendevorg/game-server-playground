@@ -1,17 +1,27 @@
-import { Snapshot, Player } from '../interfaces';
+import { Snapshot, Player, PublicPlayer } from '../interfaces';
 import cache from '../utils/cache';
 import omit from '../utils/omit';
 
-export default (id: string): Snapshot | null => {
-  // TODO: This should get things from cache -> redis -> database
-  const player: Player | undefined = cache.get<Player>(id);
-  if (!player) {
-    return null;
-  }
-  const publicPlayer = omit(player, ['ip', 'lastUpdate']);
-  return {
-    id,
-    player: publicPlayer,
-    timestamp: new Date().toTimeString(),
-  };
+export default (): Promise<Snapshot> => {
+  return new Promise<Snapshot>((resolve, reject) => {
+    // TODO: This should get things from cache -> redis -> database
+    const playerIds: Array<string> | undefined = cache.keys();
+    if (!playerIds) {
+      return reject();
+    }
+    const players: Array<PublicPlayer> = [];
+    playerIds.forEach((playerId) => {
+      const player: Player | undefined = cache.get(playerId);
+      if (!player) {
+        console.error('Player id in online list but not in cache');
+        return;
+      }
+      const publicPlayer = omit(player, ['ip', 'lastUpdate']);
+      players.push(publicPlayer);
+    });
+    return resolve({
+      players,
+      timestamp: new Date().toTimeString(),
+    });
+  });
 };

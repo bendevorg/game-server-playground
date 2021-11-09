@@ -1,4 +1,4 @@
 import Player from './player';
 
-export default interface PlayerPublic
+export default interface PublicPlayer
   extends Omit<Player, 'ip' | 'lastUpdate'> {}

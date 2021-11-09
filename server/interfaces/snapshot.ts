@@ -1,7 +1,6 @@
-import PlayerPublic from './playerPublic';
+import PublicPlayer from './publicPlayer';
 
 export default interface Snapshot {
-  id: string;
-  player: PlayerPublic;
+  players: Array<PublicPlayer>;
   timestamp: string;
 }

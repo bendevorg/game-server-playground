@@ -1,4 +1,5 @@
 import dgram, { Socket as SocketType, RemoteInfo } from 'dgram';
+import { network } from '../constants';
 
 class Socket {
   socket: SocketType;
@@ -14,11 +15,11 @@ class Socket {
     this.onMessageCallback = _onMessageCallback;
   }
 
-  sendMessage(message: string, remoteInfo: RemoteInfo) {
+  sendMessage(buffer: Buffer, address: string) {
     this.socket.send(
-      message,
-      remoteInfo.port,
-      remoteInfo.address,
+      buffer,
+      network.CLIENT_COMMUNICATION_PORT,
+      address,
       (error: any) => {
         if (!error) {
           return;
