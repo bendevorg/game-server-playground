@@ -7,9 +7,9 @@ export default (player: Player, mainSnapshot: Snapshot) => {
     // Filter only visible players and monsters
     const visiblePlayers = mainSnapshot.players.filter((otherPlayer) => {
       return (
-        Math.abs(player.positionX - otherPlayer.positionX) <=
+        Math.abs(player.position.x - otherPlayer.position.x) <=
           game.VISION_DISTANCE &&
-        Math.abs(player.positionZ - otherPlayer.positionZ) <=
+        Math.abs(player.position.z - otherPlayer.position.z) <=
           game.VISION_DISTANCE
       );
     });
@@ -32,10 +32,14 @@ export default (player: Player, mainSnapshot: Snapshot) => {
       let playerOffset = 0;
       buffer.write(player.id, offset);
       playerOffset += network.BUFFER_ID_SIZE;
-      buffer.writeInt16LE(player.positionX, offset + playerOffset);
+      // We multiply this by a 100 because we store this in a short (int 16) to save space
+      // But that doesn't have decimals, so we multiply it here and divide on the client
+      buffer.writeInt16LE(player.position.x * 100, offset + playerOffset);
       playerOffset += network.INT16_SIZE;
       // TODO: Add Y when it makes sense
-      buffer.writeInt16LE(player.positionZ, offset + playerOffset);
+      // We multiply this by a 100 because we store this in a short (int 16) to save space
+      // But that doesn't have decimals, so we multiply it here and divide on the client
+      buffer.writeInt16LE(player.position.z * 100, offset + playerOffset);
       playerOffset += network.INT16_SIZE;
       buffer.writeUInt8(player.speed, offset + playerOffset);
     });

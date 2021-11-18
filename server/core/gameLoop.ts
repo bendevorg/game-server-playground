@@ -1,6 +1,7 @@
 import inputQueue from '../utils/inputQueue';
 import sendSnapshots from '../controllers/sendSnapshots';
 import processInput from '../controllers/processInput';
+import updatePlayerStates from '../controllers/updatePlayerStates';
 import { engine } from '../constants';
 
 const gameLoop = async () => {
@@ -17,6 +18,8 @@ const gameLoop = async () => {
     // Otherwise we might have collisions between different player inputs
     await processInput(input);
   }
+  // TODO: Maybe we shouldn't wait for this
+  await updatePlayerStates();
   sendSnapshots();
   setTimeout(gameLoop, engine.INTERVAL_BETWEEN_TICKS);
 };

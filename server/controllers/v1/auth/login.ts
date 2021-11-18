@@ -25,7 +25,6 @@ import uuid4 from 'uuid4';
 import generateSnapshot from '../../../controllers/generateSnapshot';
 import cache from '../../../utils/cache';
 import { Player } from '../../../interfaces';
-import { cache as constants } from '../../../constants';
 
 export default async (req: Request, res: Response) => {
   // TODO: Login will return the current game snapshot
@@ -41,7 +40,7 @@ export default async (req: Request, res: Response) => {
     player !== undefined
       ? { ...player, ip }
       : // TODO: Get this from the database
-        { id, ip, positionX: 3, positionY: 0.5, positionZ: -3, speed: 5 },
+        { id, ip, position: { x: 3, y: 0.5, z: -3 }, speed: 3 },
   );
   const snapshot = await generateSnapshot();
   return res.status(200).json({ id, snapshot });

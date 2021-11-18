@@ -1,15 +1,15 @@
 import { actions, network } from '../constants';
-import { Position } from '../interfaces';
+import { Position, Player } from '../interfaces';
+import cache from '../utils/cache';
 
 export default (input: Buffer) => {
   return new Promise<void>((resolve, reject) => {
-    // TODO: 36 is the size of uuid4, send that to a constants file
-    const id = String.fromCharCode(
-      ...input.slice(0, network.BUFFER_ID_SIZE),
-    );
+    const id = String.fromCharCode(...input.slice(0, network.BUFFER_ID_SIZE));
+    const player = cache.get<Player>(id);
+    if (!player) {
+      return reject('Player does not exist');
+    }
     const action = input[network.BUFFER_ID_SIZE];
-    console.log(id);
-    console.log(action);
     switch (action) {
       case actions.MOVEMENT:
         const x = input.readInt16LE(network.BUFFER_ID_SIZE + 1);
@@ -18,13 +18,19 @@ export default (input: Buffer) => {
         // Multiplying by 1.0 so it turns into a float
         const position: Position = {
           x: (x * 1.0) / 100,
-          y: (y * 1.0) / 100,
+          y: 0,
+          z: (y * 1.0) / 100,
         };
-        console.log(position);
+        player.movingTo = {
+          position,
+          lastUpdate: new Date(),
+        };
         break;
       default:
-        break;
+        return reject('Invalid action');
     }
+    player.lastUpdate = new Date();
+    cache.set(id, player);
     return resolve();
   });
 };

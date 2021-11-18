@@ -1,9 +1,10 @@
+import { Position, Move } from '.';
+
 export default interface Player {
   id: string;
   ip: string;
-  positionX: number;
-  positionY: number;
-  positionZ: number;
+  position: Position;
+  movingTo?: Move;
   speed: number;
   lastUpdate: Date;
 }

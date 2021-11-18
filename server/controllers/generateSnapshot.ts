@@ -16,7 +16,7 @@ export default (): Promise<Snapshot> => {
         console.error('Player id in online list but not in cache');
         return;
       }
-      const publicPlayer = omit(player, ['ip', 'lastUpdate']);
+      const publicPlayer = omit(player, ['ip', 'lastUpdate', 'movingTo']);
       players.push(publicPlayer);
     });
     return resolve({

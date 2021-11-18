@@ -1,3 +1,4 @@
 export default {
   VISION_DISTANCE: 5,
+  MIN_DISTANCE_FOR_NEXT_WAYPOINT: 0.2,
 };
