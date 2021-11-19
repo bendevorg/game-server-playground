@@ -5,5 +5,6 @@ import errors from './errors';
 import game from './game';
 import messages from './messages';
 import network from './network';
+import map from './map';
 
-export { errors, messages, actions, engine, cache, game, network };
+export { errors, messages, actions, engine, cache, game, network, map };

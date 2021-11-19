@@ -3,8 +3,10 @@ import sendSnapshots from '../controllers/sendSnapshots';
 import processInput from '../controllers/processInput';
 import updatePlayerStates from '../controllers/updatePlayerStates';
 import { engine } from '../constants';
+import { Map } from '../interfaces';
 
-const gameLoop = async () => {
+// I don't like passing the map as a parameter
+const gameLoop = async (map: Map) => {
   // We store the queue length so we don't
   // Process inputs that are arriving in the middle of this game loop
   // TODO: Should we order these inputs by timestamp?
@@ -21,7 +23,7 @@ const gameLoop = async () => {
   // TODO: Maybe we shouldn't wait for this
   await updatePlayerStates();
   sendSnapshots();
-  setTimeout(gameLoop, engine.INTERVAL_BETWEEN_TICKS);
+  setTimeout(() => gameLoop(map), engine.INTERVAL_BETWEEN_TICKS);
 };
 
 export default gameLoop;

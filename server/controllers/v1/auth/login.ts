@@ -27,7 +27,6 @@ import cache from '../../../utils/cache';
 import { Player } from '../../../interfaces';
 
 export default async (req: Request, res: Response) => {
-  // TODO: Login will return the current game snapshot
   // In the future this info will be returned by the select character or something like that
 
   // TODO: Get this from the database

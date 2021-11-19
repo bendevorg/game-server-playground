@@ -1,10 +1,12 @@
 {
   "development": {
     "NODE_ENV": "development",
+    "MAP_NAME": "test",
     "PORT": 8080
   },
   "production": {
     "NODE_ENV": "production",
+    "MAP_NAME": "test",
     "PORT": 8080
   }
 }
