@@ -2,19 +2,22 @@ import { Player } from '../../interfaces';
 import { game } from '../../constants';
 
 export default (player: Player) => {
-  if (!player.movingTo) {
+  if (!player.path) {
     return;
   }
-  const distanceX = player.movingTo.position.x - player.position.x;
-  const distanceZ = player.movingTo.position.z - player.position.z;
+  const distanceX = player.path.waypoints[player.path.waypoints.length - 1].x - player.position.x;
+  const distanceZ = player.path.waypoints[player.path.waypoints.length - 1].z - player.position.z;
   const magnitude = Math.sqrt(distanceX * distanceX + distanceZ * distanceZ);
   if (magnitude <= game.MIN_DISTANCE_FOR_NEXT_WAYPOINT) {
     player.position = {
       ...player.position,
-      x: player.movingTo.position.x,
-      y: player.movingTo.position.y,
+      x: player.path.waypoints[player.path.waypoints.length - 1].x,
+      z: player.path.waypoints[player.path.waypoints.length - 1].z,
     }
-    player.movingTo = undefined;
+    player.path.waypoints.pop();
+    if (player.path.waypoints.length === 0) {
+      player.path = undefined;
+    }
     return;
   }
   const directionX = distanceX / magnitude;

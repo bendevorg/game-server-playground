@@ -3,7 +3,7 @@ import sendSnapshots from '../controllers/sendSnapshots';
 import processInput from '../controllers/processInput';
 import updatePlayerStates from '../controllers/updatePlayerStates';
 import { engine } from '../constants';
-import { Map } from '../interfaces';
+import { Map } from '../classes';
 
 // I don't like passing the map as a parameter
 const gameLoop = async (map: Map) => {
@@ -18,7 +18,7 @@ const gameLoop = async (map: Map) => {
     }
     // We should process one input at a time
     // Otherwise we might have collisions between different player inputs
-    await processInput(input);
+    await processInput(input, map);
   }
   // TODO: Maybe we shouldn't wait for this
   await updatePlayerStates();
