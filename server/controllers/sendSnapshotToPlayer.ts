@@ -20,9 +20,12 @@ export default (player: Player, mainSnapshot: Snapshot) => {
     // TODO: Can we improve the size of this buffer even further?
     // Players length + Players
     const buffer = Buffer.alloc(
+      network.FLOAT_SIZE +
       network.INT8_SIZE +
         network.BUFFER_PLAYER_SIZE * playerSnapshot.players.length,
     );
+    // TODO: Can we improve this? Timestamp doesn't fit in an int 32
+    buffer.writeFloatLE(mainSnapshot.timestamp);
     // This might need to change into a Uint16 since the length can be bigger than 255
     // In some extreme scenarios
     buffer.writeUInt8(playerSnapshot.players.length);

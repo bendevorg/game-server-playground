@@ -21,7 +21,7 @@ export default (): Promise<Snapshot> => {
     });
     return resolve({
       players,
-      timestamp: new Date().toTimeString(),
+      timestamp: Date.now(),
     });
   });
 };
