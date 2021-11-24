@@ -6,5 +6,5 @@ export default interface Player {
   position: Position;
   path?: Path;
   speed: number;
-  lastUpdate: Date;
+  lastUpdate: number;
 }

@@ -22,7 +22,7 @@ export default (player: Player) => {
   }
   const directionX = distanceX / magnitude;
   const directionZ = distanceZ / magnitude;
-  const timeSinceLastUpdate = ((new Date()).getTime() - player.lastUpdate.getTime()) / 1000;
+  const timeSinceLastUpdate = ((new Date()).getTime() - player.lastUpdate) / 1000;
   const distanceToMoveInX = directionX * player.speed * timeSinceLastUpdate;
   const distanceToMoveInZ = directionZ * player.speed * timeSinceLastUpdate;
   player.position = {

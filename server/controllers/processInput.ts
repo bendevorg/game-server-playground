@@ -6,16 +6,23 @@ import cache from '../utils/cache';
 
 export default (input: Buffer, map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
-    const id = String.fromCharCode(...input.slice(0, network.BUFFER_ID_SIZE));
+    const timestamp = input.readDoubleLE();
+    let offset = network.DOUBLE_SIZE;
+    const id = String.fromCharCode(
+      ...input.slice(offset, network.BUFFER_ID_SIZE + offset),
+    );
+    offset += network.BUFFER_ID_SIZE;
     const player = cache.get<Player>(id);
     if (!player) {
       return reject('Player does not exist');
     }
-    const action = input[network.BUFFER_ID_SIZE];
+    const action = input[offset];
+    offset += network.INT8_SIZE;
     switch (action) {
       case actions.MOVEMENT:
-        const x = input.readInt16LE(network.BUFFER_ID_SIZE + 1);
-        const z = input.readInt16LE(network.BUFFER_ID_SIZE + 3);
+        const x = input.readInt16LE(offset);
+        offset += network.INT16_SIZE;
+        const z = input.readInt16LE(offset);
         // The position is a short where the last 2 numbers are decimals
         // Multiplying by 1.0 so it turns into a float
         const position: Position = {
@@ -28,14 +35,14 @@ export default (input: Buffer, map: Map) => {
         // And lift that lock later
         try {
           await calculatePath(player, position, map);
-        } catch(err) {
+        } catch (err) {
           console.error(err);
         }
         break;
       default:
         return reject('Invalid action');
     }
-    player.lastUpdate = new Date();
+    player.lastUpdate = timestamp;
     cache.set(id, player);
     return resolve();
   });

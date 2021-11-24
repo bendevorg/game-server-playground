@@ -1,4 +1,5 @@
 import { RemoteInfo } from 'dgram';
+import { network } from '../constants';
 import inputQueue from '../utils/inputQueue';
 
 export default (buffer: Buffer, senderInfo: RemoteInfo) => {
@@ -13,5 +14,11 @@ export default (buffer: Buffer, senderInfo: RemoteInfo) => {
   if (buffer.length === 0) {
     return;
   }
-  inputQueue.push(buffer);
+  // We add the timestamp as soon as we receive the input and not from the client
+  // Since they can manipulate the timestamp to seem like they did something in a different time
+  const timestamp = new Date().getTime();
+  const timestampedBuffer = Buffer.alloc(network.DOUBLE_SIZE + buffer.length);
+  timestampedBuffer.writeDoubleLE(timestamp);
+  buffer.copy(timestampedBuffer, network.DOUBLE_SIZE);
+  inputQueue.push(timestampedBuffer);
 };

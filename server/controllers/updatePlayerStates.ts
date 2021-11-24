@@ -13,7 +13,7 @@ export default () => {
         return;
       }
       moveEntity(player);
-      player.lastUpdate = new Date();
+      player.lastUpdate = new Date().getTime();
       cache.set(playerId, player);
     });
     return resolve();
