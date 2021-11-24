@@ -26,10 +26,11 @@ export default (player: Player, mainSnapshot: Snapshot) => {
     );
     // TODO: Can we improve this? Timestamp doesn't fit in an int 32
     buffer.writeFloatLE(mainSnapshot.timestamp);
+    let offset = network.FLOAT_SIZE;
     // This might need to change into a Uint16 since the length can be bigger than 255
     // In some extreme scenarios
-    buffer.writeUInt8(playerSnapshot.players.length);
-    let offset = 1;
+    buffer.writeUInt8(playerSnapshot.players.length, offset);
+    offset += network.INT8_SIZE;
     playerSnapshot.players.forEach((player, index) => {
       offset += network.BUFFER_PLAYER_SIZE * index;
       let playerOffset = 0;
