@@ -15,10 +15,10 @@ class Socket {
     this.onMessageCallback = _onMessageCallback;
   }
 
-  sendMessage(buffer: Buffer, address: string) {
+  sendMessage(buffer: Buffer, address: string, port: number) {
     this.socket.send(
       buffer,
-      network.CLIENT_COMMUNICATION_PORT,
+      port,
       address,
       (error: any) => {
         if (!error) {

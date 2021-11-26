@@ -23,7 +23,7 @@ const gameLoop = async (map: Map) => {
   // TODO: Maybe we shouldn't wait for this
   await updatePlayerStates();
   sendSnapshots();
-  setTimeout(() => gameLoop(map), engine.INTERVAL_BETWEEN_TICKS);
+  setTimeout(() => gameLoop(map), 1000 / engine.TICK_RATE);
 };
 
 export default gameLoop;

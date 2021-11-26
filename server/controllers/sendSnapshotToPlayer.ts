@@ -21,7 +21,7 @@ export default (player: Player, mainSnapshot: Snapshot) => {
     // Players length + Players
     const buffer = Buffer.alloc(
       network.FLOAT_SIZE +
-      network.INT8_SIZE +
+        network.INT8_SIZE +
         network.BUFFER_PLAYER_SIZE * playerSnapshot.players.length,
     );
     // TODO: Can we improve this? Timestamp doesn't fit in an int 32
@@ -47,6 +47,6 @@ export default (player: Player, mainSnapshot: Snapshot) => {
       playerOffset += network.INT16_SIZE;
       buffer.writeUInt8(player.speed, offset + playerOffset);
     });
-    socket.sendMessage(buffer, player.ip);
+    socket.sendMessage(buffer, player.ip, player.port);
   });
 };

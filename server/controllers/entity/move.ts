@@ -1,9 +1,8 @@
 import { Player } from '../../interfaces';
 import { game } from '../../constants';
-import path from 'path/posix';
 
 export default (player: Player) => {
-  if (!player.path) {
+  if (!player.path || player.path.waypoints.length === 0) {
     return;
   }
   let distanceX =

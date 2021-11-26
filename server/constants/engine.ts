@@ -1,3 +1,3 @@
 export default {
-  INTERVAL_BETWEEN_TICKS: 30,
+  TICK_RATE: 10,
 };

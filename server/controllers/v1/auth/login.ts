@@ -32,14 +32,15 @@ export default async (req: Request, res: Response) => {
   // TODO: Get this from the database
   const id = uuid4();
   const { ip } = req;
+  const { port } = req.body;
   // TODO: Get from cache -> redis -> database
   const player: Player | undefined = cache.get<Player>(id);
   cache.set(
     id,
     player !== undefined
-      ? { ...player, ip }
+      ? { ...player, ip, port }
       : // TODO: Get this from the database
-        { id, ip, position: { x: 3, y: 0.5, z: -3 }, speed: 3 },
+        { id, ip, port, position: { x: 3, y: 0.5, z: -3 }, speed: 3 },
   );
   const snapshot = await generateSnapshot();
   return res.status(200).json({ id, snapshot });
