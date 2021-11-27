@@ -22,11 +22,13 @@ export default async (req: Request, res: Response) => {
   // TODO: Check if have access to get this entities path
   const { id } = req.params;
   const player: Player | undefined = cache.get<Player>(id);
-  if (!player?.path) {
+  if (!player?.path || player.path.waypoints.length === 0) {
     return res.status(404).json();
   }
-  const { waypoints } = player.path;
   const { position } = player;
+  const { startNodePosition, target, waypoints } = player.path;
   const timestamp = new Date().getTime();
-  return res.status(200).json({ waypoints, position, timestamp });
+  return res
+    .status(200)
+    .json({ position, startNodePosition, target, waypoints, timestamp });
 };

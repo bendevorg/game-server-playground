@@ -147,6 +147,7 @@ export default (entity: Player, target: Position, map: Map) => {
       previousDirection = direction;
     }
     const path: Path = {
+      startNodePosition: start.position,
       target,
       waypoints,
     };
