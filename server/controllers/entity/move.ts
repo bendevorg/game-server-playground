@@ -16,6 +16,7 @@ export default (player: Player, currentTimestamp?: number) => {
     player.position.z;
   let magnitude = Math.sqrt(distanceX * distanceX + distanceZ * distanceZ);
 
+  // TODO: We should also check if we passed the waypoint
   while (
     magnitude <= game.MIN_DISTANCE_FOR_NEXT_WAYPOINT &&
     player.path.waypoints.length > 1

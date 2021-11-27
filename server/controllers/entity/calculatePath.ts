@@ -149,7 +149,6 @@ export default (entity: Player, target: Position, map: Map) => {
     const path: Path = {
       target,
       waypoints,
-      currenyWaypointIndex: 0,
     };
     entity.path = path;
     return resolve();
