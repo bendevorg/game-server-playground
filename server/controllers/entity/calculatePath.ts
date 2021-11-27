@@ -3,7 +3,7 @@ import { Position, Player, Path, Node } from '../../interfaces';
 import { map as constants } from '../../constants';
 
 export default (entity: Player, target: Position, map: Map) => {
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<void>((resolve) => {
     const startGridPosition = map.worldPositionToGridPosition(entity.position);
     const targetGridPosition = map.worldPositionToGridPosition(target);
     const grid = map.cloneGrid();
@@ -13,7 +13,7 @@ export default (entity: Player, target: Position, map: Map) => {
       start.type !== constants.GROUND_TILE ||
       end.type !== constants.GROUND_TILE
     ) {
-      return reject();
+      return resolve();
     }
     const nodes: Array<Node> = [];
     const waypoints: Array<Position> = [];

@@ -1,7 +1,10 @@
 import { Player } from '../../interfaces';
 import { game } from '../../constants';
 
-export default (player: Player) => {
+// The optional currentTimestamp parameter may be sent
+// to be used to check how much the player should move
+// If the parameter is not send Date.now() will be used
+export default (player: Player, currentTimestamp?: number) => {
   if (!player.path || player.path.waypoints.length === 0) {
     return;
   }
@@ -38,7 +41,7 @@ export default (player: Player) => {
   }
   const directionX = distanceX / magnitude;
   const directionZ = distanceZ / magnitude;
-  const timeSinceLastUpdate = (new Date().getTime() - player.lastUpdate) / 1000;
+  const timeSinceLastUpdate = ((currentTimestamp || new Date().getTime()) - player.lastUpdate) / 1000;
   const distanceToMoveInX = directionX * player.speed * timeSinceLastUpdate;
   const distanceToMoveInZ = directionZ * player.speed * timeSinceLastUpdate;
   player.position = {

@@ -1,5 +1,6 @@
 import calculatePath from './entity/calculatePath';
 import { Map } from '../classes';
+import move from '../controllers/entity/move';
 import { actions, network } from '../constants';
 import { Position, Player } from '../interfaces';
 import cache from '../utils/cache';
@@ -30,14 +31,12 @@ export default (input: Buffer, map: Map) => {
           y: 0,
           z: (z * 1.0) / 100,
         };
+        // We should apply the movement between last and this tick before changing paths
+        move(player, timestamp);
+
         // TODO: Maybe we shouldn't wait but put a lock on the player instead
-        // So we can't do any updates until we finish this process
-        // And lift that lock later
-        try {
-          await calculatePath(player, position, map);
-        } catch (err) {
-          console.error(err);
-        }
+        // And do this in another thread.
+        await calculatePath(player, position, map);
         break;
       default:
         return reject('Invalid action');
