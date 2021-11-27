@@ -32,12 +32,12 @@ export default (entity: Player, target: Position, map: Map) => {
       let lowestCostIndex = 0;
       //  Get the next cheapest node
       for (let i = 0; i < candidatesList.length; i++) {
-        if (
-          candidatesList[i].costSoFar +
-            candidatesList[i].estimatedCostToTarget <
+        const candidateCost =
+          candidatesList[i].costSoFar + candidatesList[i].estimatedCostToTarget;
+        const currentCost =
           candidatesList[lowestCostIndex].costSoFar +
-            candidatesList[lowestCostIndex].estimatedCostToTarget
-        ) {
+          candidatesList[lowestCostIndex].estimatedCostToTarget;
+        if (candidateCost < currentCost) {
           lowestCostIndex = i;
         }
       }
