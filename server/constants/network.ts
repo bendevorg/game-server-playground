@@ -7,4 +7,5 @@ export default {
   INT8_SIZE: 1,
   BUFFER_ID_SIZE: 36,
   BUFFER_PLAYER_SIZE: 41,
+  TIME_TO_TIMEOUT: 10000,
 };

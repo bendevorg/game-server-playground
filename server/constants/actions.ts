@@ -1,3 +1,4 @@
 export default {
-  MOVEMENT: 0,
+  PING: 0,
+  MOVEMENT: 1,
 };

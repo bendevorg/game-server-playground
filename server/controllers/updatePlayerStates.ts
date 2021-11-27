@@ -1,7 +1,8 @@
+import logger from 'log-champ';
 import moveEntity from './entity/move';
 import { Player } from '../interfaces';
+import { network } from '../constants';
 import cache from '../utils/cache';
-import logger from 'log-champ';
 
 export default () => {
   return new Promise<void>(async (resolve, reject) => {
@@ -12,8 +13,11 @@ export default () => {
         logger.error('Player id found in key list but not in cache');
         return;
       }
+      if (new Date().getTime() - player.lastUpdate >= network.TIME_TO_TIMEOUT) {
+        cache.del(playerId);
+        return;
+      }
       moveEntity(player);
-      player.lastUpdate = new Date().getTime();
       cache.set(playerId, player);
     });
     return resolve();

@@ -9,4 +9,5 @@ export default interface Player {
   path?: Path;
   speed: number;
   lastUpdate: number;
+  lastMovement: number;
 }

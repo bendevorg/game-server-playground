@@ -20,6 +20,8 @@ export default (input: Buffer, map: Map) => {
     const action = input[offset];
     offset += network.INT8_SIZE;
     switch (action) {
+      case actions.PING:
+        break;
       case actions.MOVEMENT:
         const x = input.readInt16LE(offset);
         offset += network.INT16_SIZE;
@@ -37,6 +39,7 @@ export default (input: Buffer, map: Map) => {
         // TODO: Maybe we shouldn't wait but put a lock on the player instead
         // And do this in another thread.
         await calculatePath(player, position, map);
+        player.lastMovement = timestamp;
         break;
       default:
         return reject('Invalid action');
