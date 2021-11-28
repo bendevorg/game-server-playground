@@ -1,7 +1,7 @@
 import { Snapshot, Player } from '../interfaces';
 import generateSnapshot from './generateSnapshot';
 import sendSnapshotToPlayer from './sendSnapshotToPlayer';
-import cache from '../utils/cache';
+import { players as playersCache } from '../cache';
 import logger from 'log-champ';
 
 export default () => {
@@ -13,9 +13,9 @@ export default () => {
       logger.error(error as object);
       return reject();
     }
-    const players = cache.keys();
+    const players = playersCache.keys();
     players.forEach((playerId) => {
-      const player = cache.get<Player>(playerId);
+      const player = playersCache.get<Player>(playerId);
       if (!player) {
         logger.error('Player id found in key list but not in cache');
         return;

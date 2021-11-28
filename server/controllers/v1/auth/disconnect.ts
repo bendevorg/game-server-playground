@@ -18,15 +18,14 @@
   *
  */
 
-    import { Request, Response } from 'express';
-    import cache from '../../../utils/cache';
-    
-    export default async (req: Request, res: Response) => {
-      // TODO: We should never receive the ID like this of course
-      // We should get an encrypted token that the user got when they logged in
-      // And get the ID from there. This is just a placeholder for now
-      const { id } = req.body;
-      cache.del(id);
-      return res.status(200).json();
-    };
-    
+import { Request, Response } from 'express';
+import { players } from '../../../cache';
+
+export default async (req: Request, res: Response) => {
+  // TODO: We should never receive the ID like this of course
+  // We should get an encrypted token that the user got when they logged in
+  // And get the ID from there. This is just a placeholder for now
+  const { id } = req.body;
+  players.del(id);
+  return res.status(200).json();
+};

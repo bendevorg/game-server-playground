@@ -23,7 +23,7 @@
 import { Request, Response } from 'express';
 import uuid4 from 'uuid4';
 import generateSnapshot from '../../../controllers/generateSnapshot';
-import cache from '../../../utils/cache';
+import { players } from '../../../cache';
 import { Player } from '../../../interfaces';
 
 export default async (req: Request, res: Response) => {
@@ -34,8 +34,8 @@ export default async (req: Request, res: Response) => {
   const { ip } = req;
   const { port } = req.body;
   // TODO: Get from cache -> redis -> database
-  const player: Player | undefined = cache.get<Player>(id);
-  cache.set(
+  const player: Player | undefined = players.get<Player>(id);
+  players.set(
     id,
     player !== undefined
       ? { ...player, ip, port }

@@ -7,6 +7,8 @@ class Map {
   grid: Array<Array<Node>>;
   position: Position;
   squareSize: number;
+  // TODO: Update this once we have a proper enemy data format in the map file
+  enemies: Array<{ id: number; amount: number }>;
 
   constructor(mapName: string) {
     const mapFile = JSON.parse(
@@ -17,6 +19,7 @@ class Map {
     this.grid = mapFile.grid;
     this.position = mapFile.position;
     this.squareSize = mapFile.squareSize;
+    this.enemies = mapFile.enemies;
     this.setupNeighbors();
   }
 

@@ -3,6 +3,8 @@ import inputQueue from '../utils/inputQueue';
 import sendSnapshots from '../controllers/sendSnapshots';
 import processInput from '../controllers/processInput';
 import updatePlayerStates from '../controllers/updatePlayerStates';
+import updateEnemyStates from '../controllers/updateEnemyStates';
+import spawnEnemies from '../controllers/spawnEnemies';
 import { engine } from '../constants';
 import { Map } from '../classes';
 
@@ -24,21 +26,23 @@ const gameLoop = async (map: Map) => {
     }
     // We should process one input at a time
     // Otherwise we might have collisions between different player inputs
-    // TODO: Keep an eye on these locks, first time using they might cause problems
+    // TODO: Keep an eye on these locks, first time using them, they might cause problems
     await lock.acquire('queue', async (done) => {
       try {
         await processInput(input, map);
-      } catch(err) {
+      } catch (err) {
         console.error(err);
       }
       done();
     });
   }
-  // TODO: Keep an eye on these locks, first time using they might cause problems
+  // TODO: Keep an eye on these locks, first time using them, they might cause problems
   await lock.acquire('update', async (done) => {
     try {
       await updatePlayerStates();
-    } catch(err) {
+      await updateEnemyStates();
+      await spawnEnemies(map);
+    } catch (err) {
       console.error(err);
     }
     done();

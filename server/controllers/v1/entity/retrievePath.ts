@@ -15,13 +15,13 @@
  */
 
 import { Request, Response } from 'express';
-import cache from '../../../utils/cache';
+import { players } from '../../../cache';
 import { Player } from '../../../interfaces';
 
 export default async (req: Request, res: Response) => {
   // TODO: Check if have access to get this entities path
   const { id } = req.params;
-  const player: Player | undefined = cache.get<Player>(id);
+  const player: Player | undefined = players.get<Player>(id);
   if (!player?.path || player.path.waypoints.length === 0) {
     return res.status(404).json();
   }

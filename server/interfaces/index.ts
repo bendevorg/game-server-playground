@@ -5,4 +5,6 @@ export { default as Position } from './position';
 export { default as TwoDPosition } from './twoDPosition';
 export { default as Path } from './path';
 export { default as Node } from './node';
+export { default as Enemy } from './enemy';
+export { default as PublicEnemy } from './publicEnemy';
 export { IModuleDictionary, IStringDictionary } from './common';

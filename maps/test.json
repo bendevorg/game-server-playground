@@ -28886,5 +28886,11 @@
     "y": 0,
     "z": -5
   },
-  "squareSize": 0.25
+  "squareSize": 0.25,
+  "enemies": [
+    {
+      "id": 0,
+      "amount": 1
+    }
+  ]
 }

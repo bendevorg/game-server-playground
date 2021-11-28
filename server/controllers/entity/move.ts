@@ -1,10 +1,10 @@
-import { Player } from '../../interfaces';
+import { Player, Enemy } from '../../interfaces';
 import { game } from '../../constants';
 
 // The optional currentTimestamp parameter may be sent
 // to be used to check how much the player should move
 // If the parameter is not send Date.now() will be used
-export default (player: Player, currentTimestamp?: number) => {
+export default (player: Player | Enemy, currentTimestamp?: number) => {
   if (!player.path || player.path.waypoints.length === 0) {
     return;
   }

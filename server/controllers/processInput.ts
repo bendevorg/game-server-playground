@@ -3,7 +3,7 @@ import { Map } from '../classes';
 import move from '../controllers/entity/move';
 import { actions, network } from '../constants';
 import { Position, Player } from '../interfaces';
-import cache from '../utils/cache';
+import { players } from '../cache';
 
 export default (input: Buffer, map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
@@ -13,7 +13,7 @@ export default (input: Buffer, map: Map) => {
       ...input.slice(offset, network.BUFFER_ID_SIZE + offset),
     );
     offset += network.BUFFER_ID_SIZE;
-    const player = cache.get<Player>(id);
+    const player = players.get<Player>(id);
     if (!player) {
       return reject('Player does not exist');
     }
@@ -45,7 +45,7 @@ export default (input: Buffer, map: Map) => {
         return reject('Invalid action');
     }
     player.lastUpdate = timestamp;
-    cache.set(id, player);
+    players.set(id, player);
     return resolve();
   });
 };
