@@ -1,13 +1,21 @@
 import uuid4 from 'uuid4';
 import { Map } from '../';
-import { Path, Position, Node, PublicLivingEntity } from '../../interfaces';
-import { map as constants, game, locks } from '../../constants';
+import {
+  Path,
+  Position,
+  Node,
+  PublicLivingEntity,
+  LivingEntityConstructor,
+} from '../../interfaces';
+import { map as constants, game, locks, network } from '../../constants';
 import lock from '../../utils/lock';
 
 export default class LivingEntity {
   id: string;
   position: Position;
   path?: Path;
+  health: number;
+  maxHealth: number;
   speed: number;
   lastUpdate: number;
   lastMovement: number;
@@ -16,14 +24,14 @@ export default class LivingEntity {
   constructor({
     id,
     position,
+    health,
+    maxHealth,
     speed,
-  }: {
-    id: string | undefined;
-    position: Position;
-    speed: number;
-  }) {
+  }: LivingEntityConstructor) {
     this.id = id || uuid4();
     this.position = position;
+    this.health = health;
+    this.maxHealth = maxHealth;
     this.speed = speed;
     this.lastUpdate = new Date().getTime();
     this.lastMovement = new Date().getTime();
@@ -51,6 +59,8 @@ export default class LivingEntity {
         resolve({
           id: this.id,
           position: this.position,
+          health: this.health,
+          maxHealth: this.maxHealth,
           speed: this.speed,
         });
         done();

@@ -53,6 +53,7 @@ export default class Enemy extends LivingEntity {
       return;
     }
     this.calculatingNextPath = true;
+    this.health--;
     let startNode;
     await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
       if (this.map) {

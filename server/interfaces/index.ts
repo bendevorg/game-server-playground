@@ -1,5 +1,8 @@
 export { default as Snapshot } from './snapshot';
 export { default as PublicLivingEntity } from './publicLivingEntity';
+export { default as LivingEntityConstructor } from './livingEntityConstructor';
+export { default as PlayerConstructor } from './playerConstructor';
+export { default as EnemyConstructor } from './enemyConstructor';
 export { default as Position } from './position';
 export { default as TwoDPosition } from './twoDPosition';
 export { default as Path } from './path';

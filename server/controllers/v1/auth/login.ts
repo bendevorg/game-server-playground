@@ -44,6 +44,8 @@ export default async (req: Request, res: Response) => {
       ip,
       port,
       position: { x: 3, y: 0.5, z: -3 },
+      health: 10,
+      maxHealth: 10,
       speed: 3,
     });
     if (game.MAP_NAME) {

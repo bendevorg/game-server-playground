@@ -1,7 +1,7 @@
 import { Position } from '.';
 
-export default interface PublicLivingEntity {
-  id: string;
+export default interface LivingEntityConstructor {
+  id: string | undefined;
   position: Position;
   health: number;
   maxHealth: number;

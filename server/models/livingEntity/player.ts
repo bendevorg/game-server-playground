@@ -1,5 +1,10 @@
 import { LivingEntity } from '../';
-import { Position, PublicLivingEntity, Snapshot } from '../../interfaces';
+import {
+  Position,
+  PublicLivingEntity,
+  Snapshot,
+  PlayerConstructor,
+} from '../../interfaces';
 import { game, network, locks } from '../../constants';
 import socket from '../../core/socket';
 import lock from '../../utils/lock';
@@ -11,17 +16,13 @@ export default class Player extends LivingEntity {
   constructor({
     id,
     position,
+    health,
+    maxHealth,
     speed,
     ip,
     port,
-  }: {
-    id: string | undefined;
-    position: Position;
-    speed: number;
-    ip: string;
-    port: number;
-  }) {
-    super({ id, position, speed });
+  }: PlayerConstructor) {
+    super({ id, position, health, maxHealth, speed });
     this.ip = ip;
     this.port = port;
   }
@@ -83,49 +84,54 @@ export default class Player extends LivingEntity {
       offset += network.INT8_SIZE;
       // TODO: We are creating these buffers every time we need to send it to a player
       // We could cache them
+      // Also we should improve this code, it has a lot of repetition
       playerSnapshot.players.forEach(async (player) => {
-        // We lock the position for each player here because we could be using it for the pathfinding
-        // In another async task, this avoid concurrency errors
-        await lock.acquire(locks.ENTITY_POSITION + player.id, (done) => {
-          let playerOffset = 0;
-          buffer.write(player.id, offset);
-          playerOffset += network.BUFFER_ID_SIZE;
-          // We multiply this by a 100 because we store this in a short (int 16) to save space
-          // But that doesn't have decimals, so we multiply it here and divide on the client
-          buffer.writeInt16LE(player.position.x * 100, offset + playerOffset);
-          playerOffset += network.INT16_SIZE;
-          // TODO: Add Y when it makes sense
-          // We multiply this by a 100 because we store this in a short (int 16) to save space
-          // But that doesn't have decimals, so we multiply it here and divide on the client
-          buffer.writeInt16LE(player.position.z * 100, offset + playerOffset);
-          playerOffset += network.INT16_SIZE;
-          buffer.writeUInt8(player.speed, offset + playerOffset);
-          offset += network.BUFFER_PLAYER_SIZE;
-          done();
-        });
+        let playerOffset = 0;
+        buffer.write(player.id, offset);
+        playerOffset += network.BUFFER_ID_SIZE;
+        // We multiply this by a 100 because we store this in a short (int 16) to save space
+        // But that doesn't have decimals, so we multiply it here and divide on the client
+        buffer.writeInt16LE(player.position.x * 100, offset + playerOffset);
+        playerOffset += network.INT16_SIZE;
+        // TODO: Add Y when it makes sense
+        // We multiply this by a 100 because we store this in a short (int 16) to save space
+        // But that doesn't have decimals, so we multiply it here and divide on the client
+        buffer.writeInt16LE(player.position.z * 100, offset + playerOffset);
+        playerOffset += network.INT16_SIZE;
+
+        buffer.writeInt16LE(player.health, offset + playerOffset);
+        playerOffset += network.INT16_SIZE;
+
+        buffer.writeInt16LE(player.maxHealth, offset + playerOffset);
+        playerOffset += network.INT16_SIZE;
+
+        buffer.writeUInt8(player.speed, offset + playerOffset);
+        offset += network.BUFFER_PLAYER_SIZE;
       });
       buffer.writeUInt8(playerSnapshot.enemies.length, offset);
       offset += network.INT8_SIZE;
       playerSnapshot.enemies.forEach(async (enemy) => {
-        // We lock the position here because we could be using it for the pathfinding
-        // In another async task, this avoid concurrency errors
-        await lock.acquire(locks.ENTITY_POSITION + enemy.id, (done) => {
-          let enemyOffset = 0;
-          buffer.write(enemy.id, offset);
-          enemyOffset += network.BUFFER_ID_SIZE;
-          // We multiply this by a 100 because we store this in a short (int 16) to save space
-          // But that doesn't have decimals, so we multiply it here and divide on the client
-          buffer.writeInt16LE(enemy.position.x * 100, offset + enemyOffset);
-          enemyOffset += network.INT16_SIZE;
-          // TODO: Add Y when it makes sense
-          // We multiply this by a 100 because we store this in a short (int 16) to save space
-          // But that doesn't have decimals, so we multiply it here and divide on the client
-          buffer.writeInt16LE(enemy.position.z * 100, offset + enemyOffset);
-          enemyOffset += network.INT16_SIZE;
-          buffer.writeUInt8(enemy.speed, offset + enemyOffset);
-          offset += network.BUFFER_ENEMY_SIZE;
-          done();
-        });
+        let enemyOffset = 0;
+        buffer.write(enemy.id, offset);
+        enemyOffset += network.BUFFER_ID_SIZE;
+        // We multiply this by a 100 because we store this in a short (int 16) to save space
+        // But that doesn't have decimals, so we multiply it here and divide on the client
+        buffer.writeInt16LE(enemy.position.x * 100, offset + enemyOffset);
+        enemyOffset += network.INT16_SIZE;
+        // TODO: Add Y when it makes sense
+        // We multiply this by a 100 because we store this in a short (int 16) to save space
+        // But that doesn't have decimals, so we multiply it here and divide on the client
+        buffer.writeInt16LE(enemy.position.z * 100, offset + enemyOffset);
+        enemyOffset += network.INT16_SIZE;
+
+        buffer.writeInt16LE(enemy.health, offset + enemyOffset);
+        enemyOffset += network.INT16_SIZE;
+
+        buffer.writeInt16LE(enemy.maxHealth, offset + enemyOffset);
+        enemyOffset += network.INT16_SIZE;
+
+        buffer.writeUInt8(enemy.speed, offset + enemyOffset);
+        offset += network.BUFFER_ENEMY_SIZE;
       });
       socket.sendMessage(buffer, this.ip, this.port);
     });
