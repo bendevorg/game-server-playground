@@ -34,6 +34,7 @@ export default class Player extends LivingEntity {
     this.ip = ip;
     this.port = port;
   }
+
   sendSnapshot(snapshot: Snapshot) {
     return new Promise<void>(async (resolve, reject) => {
       let visiblePlayers: Array<PublicLivingEntity> = [];

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { map as constants } from '../constants';
+import { map as constants, map } from '../constants';
 import { Node, Position } from '../interfaces';
 
 export default class Map {
@@ -74,6 +74,23 @@ export default class Map {
     return { row, column };
   }
 
+  worldPositionToNode(targetPosition: Position): Node {
+    const distanceFromStartInX = targetPosition.x - this.position.x;
+    const distanceFromStartInZ = targetPosition.z - this.position.z;
+    const row = Math.floor(distanceFromStartInZ / this.squareSize);
+    const column = Math.floor(distanceFromStartInX / this.squareSize);
+    if (
+      this.grid == null ||
+      row < 0 ||
+      row >= this.grid.length ||
+      column < 0 ||
+      column >= this.grid[row].length
+    ) {
+      throw 'World position is not inside the grid';
+    }
+    return this.grid[row][column];
+  }
+
   cloneGrid(): Array<Array<Node>> {
     if (!this.grid) {
       return [];
@@ -104,5 +121,27 @@ export default class Map {
       }
     }
     return clone;
+  }
+
+  getRandomWalkableNode(center: Node, range: number): Node | null {
+    // TODO: Improve this, we should be able to do this in O(1) without
+    // having to rely on "luck". Right now we try 5 times (each being O(1))
+    // But there is a chance that all tries ends up hiting an obstacle.
+    // In the best scenario we would do the same but only try to fetch from the walkable tiles
+    let tentatives = 0;
+    while (tentatives < 5) {
+      const cellsRange = Math.ceil(range / this.squareSize);
+      const minRow = Math.max(0, center.gridPosition.y - cellsRange);
+      const maxRow = Math.min(this.grid.length - 1, center.gridPosition.y + cellsRange);
+      const minColumn = Math.max(0, center.gridPosition.x - cellsRange);
+      const maxColumn = Math.min(this.grid[0].length - 1, center.gridPosition.x + cellsRange);
+      const row = Math.floor(Math.random() * (maxRow - minRow + 1) + minRow);
+      const column = Math.floor(Math.random() * (maxColumn - minColumn + 1) + minColumn);
+      if (this.grid[row][column].type === map.GROUND_TILE) {
+        return this.grid[row][column];
+      }
+      tentatives++;
+    }
+    return null;
   }
 }

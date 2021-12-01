@@ -12,8 +12,9 @@ export default (map: Map) => {
         const enemy = new Enemy({
           id,
           position: { x: -3, y: 0.5, z: -3 },
-          speed: 3,
+          speed: 1.5,
         });
+        enemy.setMap(map);
         enemiesCache.set(id, enemy);
       }
     }
