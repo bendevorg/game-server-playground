@@ -7,13 +7,15 @@ export default (map: Map) => {
     const enemies = enemiesCache.keys();
     // TODO: Support multiple types of enemies
     for (let i = 0; i < map.enemies.length - enemies.length; i++) {
-      const id = uuid4();
-      const enemy = new Enemy({
-        id,
-        position: { x: -3, y: 0.5, z: -3 },
-        speed: 3,
-      });
-      enemiesCache.set(id, enemy);
+      for (let j = 0; j < map.enemies[i].amount; j++) {
+        const id = uuid4();
+        const enemy = new Enemy({
+          id,
+          position: { x: -3, y: 0.5, z: -3 },
+          speed: 3,
+        });
+        enemiesCache.set(id, enemy);
+      }
     }
     return resolve();
   });

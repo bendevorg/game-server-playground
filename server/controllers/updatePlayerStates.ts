@@ -16,7 +16,7 @@ export default () => {
         playersCache.del(playerId);
         return;
       }
-      player.move();
+      player.update();
       playersCache.set(playerId, player);
     });
     return resolve();

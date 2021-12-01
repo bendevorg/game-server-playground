@@ -11,7 +11,7 @@ export default () => {
         logger.error('Enemy id found in key list but not in cache');
         return;
       }
-      enemy.move();
+      enemy.update();
       enemiesCache.set(enemyId, enemy);
     });
     return resolve();
