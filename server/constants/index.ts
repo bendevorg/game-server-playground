@@ -6,5 +6,6 @@ import game from './game';
 import messages from './messages';
 import network from './network';
 import map from './map';
+import locks from './locks';
 
-export { errors, messages, actions, engine, cache, game, network, map };
+export { errors, messages, actions, engine, cache, game, network, map, locks };

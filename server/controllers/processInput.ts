@@ -34,9 +34,9 @@ export default (input: Buffer, map: Map) => {
         // We should apply the movement between last and this tick before changing paths
         player.move(timestamp);
 
-        // TODO: Maybe we shouldn't wait but put a lock on the player instead
-        // And do this in another thread.
-        await player.calculatePath(position);
+        // We don't wait for this but living entity internally uses locks to
+        // guarantee that we won't have collisions when accessing things
+        player.calculatePath(position);
         player.lastMovement = timestamp;
         break;
       default:

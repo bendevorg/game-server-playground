@@ -1,7 +1,8 @@
 import { LivingEntity } from '../';
-import { Position, Snapshot } from '../../interfaces';
-import { game, network } from '../../constants';
+import { Position, PublicLivingEntity, Snapshot } from '../../interfaces';
+import { game, network, locks } from '../../constants';
 import socket from '../../core/socket';
+import lock from '../../utils/lock';
 
 export default class Player extends LivingEntity {
   ip: string;
@@ -33,24 +34,30 @@ export default class Player extends LivingEntity {
     this.ip = ip;
     this.port = port;
   }
-
   sendSnapshot(snapshot: Snapshot) {
-    return new Promise<void>((resolve, reject) => {
-      // Filter only visible players and monsters
-      const visiblePlayers = snapshot.players.filter((otherPlayer) => {
-        return (
-          Math.abs(this.position.x - otherPlayer.position.x) <=
-            game.VISION_DISTANCE &&
-          Math.abs(this.position.z - otherPlayer.position.z) <=
-            game.VISION_DISTANCE
-        );
-      });
-      const visibleEnemies = snapshot.enemies.filter((enemy) => {
-        return (
-          Math.abs(this.position.x - enemy.position.x) <=
-            game.VISION_DISTANCE &&
-          Math.abs(this.position.z - enemy.position.z) <= game.VISION_DISTANCE
-        );
+    return new Promise<void>(async (resolve, reject) => {
+      let visiblePlayers: Array<PublicLivingEntity> = [];
+      let visibleEnemies: Array<PublicLivingEntity> = [];
+      // We lock the position here because we could be using it for the pathfinding
+      // In another async task, this avoid concurrency errors
+      await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
+        // Filter only visible players and monsters
+        visiblePlayers = snapshot.players.filter((otherPlayer) => {
+          return (
+            Math.abs(this.position.x - otherPlayer.position.x) <=
+              game.VISION_DISTANCE &&
+            Math.abs(this.position.z - otherPlayer.position.z) <=
+              game.VISION_DISTANCE
+          );
+        });
+        visibleEnemies = snapshot.enemies.filter((enemy) => {
+          return (
+            Math.abs(this.position.x - enemy.position.x) <=
+              game.VISION_DISTANCE &&
+            Math.abs(this.position.z - enemy.position.z) <= game.VISION_DISTANCE
+          );
+        });
+        done();
       });
       const playerSnapshot = {
         players: visiblePlayers,
@@ -73,39 +80,51 @@ export default class Player extends LivingEntity {
       // In some extreme scenarios
       buffer.writeUInt8(playerSnapshot.players.length, offset);
       offset += network.INT8_SIZE;
-      playerSnapshot.players.forEach((player) => {
-        let playerOffset = 0;
-        buffer.write(player.id, offset);
-        playerOffset += network.BUFFER_ID_SIZE;
-        // We multiply this by a 100 because we store this in a short (int 16) to save space
-        // But that doesn't have decimals, so we multiply it here and divide on the client
-        buffer.writeInt16LE(player.position.x * 100, offset + playerOffset);
-        playerOffset += network.INT16_SIZE;
-        // TODO: Add Y when it makes sense
-        // We multiply this by a 100 because we store this in a short (int 16) to save space
-        // But that doesn't have decimals, so we multiply it here and divide on the client
-        buffer.writeInt16LE(player.position.z * 100, offset + playerOffset);
-        playerOffset += network.INT16_SIZE;
-        buffer.writeUInt8(player.speed, offset + playerOffset);
-        offset += network.BUFFER_PLAYER_SIZE;
+      // TODO: We are creating these buffers every time we need to send it to a player
+      // We could cache them
+      playerSnapshot.players.forEach(async (player) => {
+        // We lock the position for each player here because we could be using it for the pathfinding
+        // In another async task, this avoid concurrency errors
+        await lock.acquire(locks.ENTITY_POSITION + player.id, (done) => {
+          let playerOffset = 0;
+          buffer.write(player.id, offset);
+          playerOffset += network.BUFFER_ID_SIZE;
+          // We multiply this by a 100 because we store this in a short (int 16) to save space
+          // But that doesn't have decimals, so we multiply it here and divide on the client
+          buffer.writeInt16LE(player.position.x * 100, offset + playerOffset);
+          playerOffset += network.INT16_SIZE;
+          // TODO: Add Y when it makes sense
+          // We multiply this by a 100 because we store this in a short (int 16) to save space
+          // But that doesn't have decimals, so we multiply it here and divide on the client
+          buffer.writeInt16LE(player.position.z * 100, offset + playerOffset);
+          playerOffset += network.INT16_SIZE;
+          buffer.writeUInt8(player.speed, offset + playerOffset);
+          offset += network.BUFFER_PLAYER_SIZE;
+          done();
+        });
       });
       buffer.writeUInt8(playerSnapshot.enemies.length, offset);
       offset += network.INT8_SIZE;
-      playerSnapshot.enemies.forEach((enemy) => {
-        let enemyOffset = 0;
-        buffer.write(enemy.id, offset);
-        enemyOffset += network.BUFFER_ID_SIZE;
-        // We multiply this by a 100 because we store this in a short (int 16) to save space
-        // But that doesn't have decimals, so we multiply it here and divide on the client
-        buffer.writeInt16LE(enemy.position.x * 100, offset + enemyOffset);
-        enemyOffset += network.INT16_SIZE;
-        // TODO: Add Y when it makes sense
-        // We multiply this by a 100 because we store this in a short (int 16) to save space
-        // But that doesn't have decimals, so we multiply it here and divide on the client
-        buffer.writeInt16LE(enemy.position.z * 100, offset + enemyOffset);
-        enemyOffset += network.INT16_SIZE;
-        buffer.writeUInt8(enemy.speed, offset + enemyOffset);
-        offset += network.BUFFER_ENEMY_SIZE;
+      playerSnapshot.enemies.forEach(async (enemy) => {
+        // We lock the position here because we could be using it for the pathfinding
+        // In another async task, this avoid concurrency errors
+        await lock.acquire(locks.ENTITY_POSITION + enemy.id, (done) => {
+          let enemyOffset = 0;
+          buffer.write(enemy.id, offset);
+          enemyOffset += network.BUFFER_ID_SIZE;
+          // We multiply this by a 100 because we store this in a short (int 16) to save space
+          // But that doesn't have decimals, so we multiply it here and divide on the client
+          buffer.writeInt16LE(enemy.position.x * 100, offset + enemyOffset);
+          enemyOffset += network.INT16_SIZE;
+          // TODO: Add Y when it makes sense
+          // We multiply this by a 100 because we store this in a short (int 16) to save space
+          // But that doesn't have decimals, so we multiply it here and divide on the client
+          buffer.writeInt16LE(enemy.position.z * 100, offset + enemyOffset);
+          enemyOffset += network.INT16_SIZE;
+          buffer.writeUInt8(enemy.speed, offset + enemyOffset);
+          offset += network.BUFFER_ENEMY_SIZE;
+          done();
+        });
       });
       socket.sendMessage(buffer, this.ip, this.port);
     });

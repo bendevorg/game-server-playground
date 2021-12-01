@@ -1,14 +1,12 @@
-import AsyncLock from 'async-lock';
 import inputQueue from '../utils/inputQueue';
 import sendSnapshots from '../controllers/sendSnapshots';
 import processInput from '../controllers/processInput';
 import updatePlayerStates from '../controllers/updatePlayerStates';
 import updateEnemyStates from '../controllers/updateEnemyStates';
 import spawnEnemies from '../controllers/spawnEnemies';
-import { engine } from '../constants';
+import lock from '../utils/lock';
+import { engine, locks } from '../constants';
 import { Map } from '../models';
-
-const lock = new AsyncLock();
 
 // I don't like passing the map as a parameter
 const gameLoop = async (map: Map) => {
@@ -27,7 +25,7 @@ const gameLoop = async (map: Map) => {
     // We should process one input at a time
     // Otherwise we might have collisions between different player inputs
     // TODO: Keep an eye on these locks, first time using them, they might cause problems
-    await lock.acquire('queue', async (done) => {
+    await lock.acquire(locks.QUEUE, async (done) => {
       try {
         await processInput(input, map);
       } catch (err) {
@@ -37,7 +35,7 @@ const gameLoop = async (map: Map) => {
     });
   }
   // TODO: Keep an eye on these locks, first time using them, they might cause problems
-  await lock.acquire('update', async (done) => {
+  await lock.acquire(locks.UPDATE, async (done) => {
     try {
       await updatePlayerStates();
       await updateEnemyStates();

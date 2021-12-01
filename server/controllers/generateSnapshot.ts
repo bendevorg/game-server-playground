@@ -1,33 +1,35 @@
 import logger from 'log-champ';
 import { Player, Enemy } from '../models';
-import { Snapshot, PublicPlayer, PublicEnemy } from '../interfaces';
+import { Snapshot, PublicLivingEntity } from '../interfaces';
 import { players as playersCache, enemies as enemiesCache } from '../cache';
 
 export default (): Promise<Snapshot> => {
-  return new Promise<Snapshot>((resolve, reject) => {
+  return new Promise<Snapshot>(async (resolve, reject) => {
     // TODO: This should get things from cache -> redis -> database
     const playerIds: Array<string> | undefined = playersCache.keys();
     const enemyIds: Array<string> | undefined = enemiesCache.keys();
     if (!playerIds || !enemyIds) {
       return reject();
     }
-    const players: Array<PublicPlayer> = [];
-    playerIds.forEach((playerId) => {
+    const players: Array<PublicLivingEntity> = [];
+    playerIds.forEach(async (playerId) => {
       const player: Player | undefined = playersCache.get(playerId);
       if (!player) {
         logger.error('Player id in online list but not in cache');
         return;
       }
-      players.push(player.retrievePublicData());
+      const data = await player.retrievePublicData();
+      players.push(data);
     });
-    const enemies: Array<PublicEnemy> = [];
-    enemyIds.forEach((enemyId) => {
+    const enemies: Array<PublicLivingEntity> = [];
+    enemyIds.forEach(async (enemyId) => {
       const enemy: Enemy | undefined = enemiesCache.get(enemyId);
       if (!enemy) {
         logger.error('Player id in online list but not in cache');
         return;
       }
-      enemies.push(enemy.retrievePublicData());
+      const data = await enemy.retrievePublicData();
+      enemies.push(data);
     });
     return resolve({
       players,

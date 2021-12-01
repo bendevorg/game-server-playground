@@ -1,7 +1,8 @@
 import uuid4 from 'uuid4';
 import { Map } from '../';
-import { Path, Position, Node } from '../../interfaces';
-import { map as constants, game } from '../../constants';
+import { Path, Position, Node, PublicLivingEntity } from '../../interfaces';
+import { map as constants, game, locks } from '../../constants';
+import lock from '../../utils/lock';
 
 export default class LivingEntity {
   id: string;
@@ -45,20 +46,32 @@ export default class LivingEntity {
   }
 
   retrievePublicData() {
-    return {
-      id: this.id,
-      position: this.position,
-      speed: this.speed,
-    };
+    return new Promise<PublicLivingEntity>((resolve) => {
+      lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
+        resolve({
+          id: this.id,
+          position: this.position,
+          speed: this.speed,
+        });
+        done();
+      });
+    });
   }
 
   calculatePath(target: Position) {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>(async (resolve, reject) => {
       if (!this.map) {
         return reject('Map not set for entity');
       }
-
-      const startGridPosition = this.map.worldPositionToGridPosition(this.position);
+      let startGridPosition = { row: 0, column: 0 };
+      await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
+        if (this.map) {
+          startGridPosition = this.map.worldPositionToGridPosition(
+            this.position,
+          );
+        }
+        done();
+      });
       const targetGridPosition = this.map.worldPositionToGridPosition(target);
       const grid = this.map.cloneGrid();
       const start = grid[startGridPosition.row][startGridPosition.column];
@@ -206,7 +219,10 @@ export default class LivingEntity {
         target,
         waypoints,
       };
-      this.path = path;
+      await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
+        this.path = path;
+        done();
+      });
       return resolve();
     });
   }
@@ -214,53 +230,67 @@ export default class LivingEntity {
   // The optional currentTimestamp parameter may be sent
   // to be used to check how much the player should move
   // If the parameter is not send Date.now() will be used
-  move(currentTimestamp?: number) {
-    if (!this.path || this.path.waypoints.length === 0) {
-      return;
-    }
-    let distanceX =
-      this.path.waypoints[this.path.waypoints.length - 1].x - this.position.x;
-    let distanceZ =
-      this.path.waypoints[this.path.waypoints.length - 1].z - this.position.z;
-    let magnitude = Math.sqrt(distanceX * distanceX + distanceZ * distanceZ);
+  async move(currentTimestamp?: number) {
+    await lock.acquire(locks.ENTITY_PATH + this.id, async (done) => {
+      await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
+        if (!this.path || this.path.waypoints.length === 0) {
+          return done();
+        }
+        let distanceX =
+          this.path.waypoints[this.path.waypoints.length - 1].x -
+          this.position.x;
+        let distanceZ =
+          this.path.waypoints[this.path.waypoints.length - 1].z -
+          this.position.z;
+        let magnitude = Math.sqrt(
+          distanceX * distanceX + distanceZ * distanceZ,
+        );
 
-    // TODO: We should also check if we passed the waypoint
-    while (
-      magnitude <= game.MIN_DISTANCE_FOR_NEXT_WAYPOINT &&
-      this.path.waypoints.length > 1
-    ) {
-      this.path.waypoints.pop();
-      distanceX =
-        this.path.waypoints[this.path.waypoints.length - 1].x - this.position.x;
-      distanceZ =
-        this.path.waypoints[this.path.waypoints.length - 1].z - this.position.z;
-      magnitude = Math.sqrt(distanceX * distanceX + distanceZ * distanceZ);
-    }
+        // TODO: We should also check if we passed the waypoint
+        while (
+          magnitude <= game.MIN_DISTANCE_FOR_NEXT_WAYPOINT &&
+          this.path.waypoints.length > 1
+        ) {
+          this.path.waypoints.pop();
+          distanceX =
+            this.path.waypoints[this.path.waypoints.length - 1].x -
+            this.position.x;
+          distanceZ =
+            this.path.waypoints[this.path.waypoints.length - 1].z -
+            this.position.z;
+          magnitude = Math.sqrt(distanceX * distanceX + distanceZ * distanceZ);
+        }
 
-    const now = new Date().getTime();
-    if (
-      magnitude <= game.MIN_DISTANCE_FOR_NEXT_WAYPOINT &&
-      this.path.waypoints.length === 1
-    ) {
-      this.position = {
-        ...this.position,
-        x: this.path.waypoints[0].x,
-        z: this.path.waypoints[0].z,
-      };
-      this.path.waypoints.pop();
-    } else {
-      const directionX = distanceX / magnitude;
-      const directionZ = distanceZ / magnitude;
-      const timeSinceLastUpdate =
-        ((currentTimestamp || now) - this.lastMovement) / 1000;
-      const distanceToMoveInX = directionX * this.speed * timeSinceLastUpdate;
-      const distanceToMoveInZ = directionZ * this.speed * timeSinceLastUpdate;
-      this.position = {
-        ...this.position,
-        x: this.position.x + distanceToMoveInX,
-        z: this.position.z + distanceToMoveInZ,
-      };
-    }
-    this.setLastMovement(now);
+        const now = new Date().getTime();
+        if (
+          magnitude <= game.MIN_DISTANCE_FOR_NEXT_WAYPOINT &&
+          this.path.waypoints.length === 1
+        ) {
+          this.position = {
+            ...this.position,
+            x: this.path.waypoints[0].x,
+            z: this.path.waypoints[0].z,
+          };
+          this.path.waypoints.pop();
+        } else {
+          const directionX = distanceX / magnitude;
+          const directionZ = distanceZ / magnitude;
+          const timeSinceLastUpdate =
+            ((currentTimestamp || now) - this.lastMovement) / 1000;
+          const distanceToMoveInX =
+            directionX * this.speed * timeSinceLastUpdate;
+          const distanceToMoveInZ =
+            directionZ * this.speed * timeSinceLastUpdate;
+          this.position = {
+            ...this.position,
+            x: this.position.x + distanceToMoveInX,
+            z: this.position.z + distanceToMoveInZ,
+          };
+        }
+        this.setLastMovement(now);
+        done();
+      });
+      done();
+    });
   }
 }

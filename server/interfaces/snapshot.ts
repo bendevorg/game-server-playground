@@ -1,8 +1,7 @@
-import PublicPlayer from './publicPlayer';
-import PublicEnemy from './publicEnemy';
+import { PublicLivingEntity } from '.';
 
 export default interface Snapshot {
-  players: Array<PublicPlayer>;
-  enemies: Array<PublicEnemy>;
+  players: Array<PublicLivingEntity>;
+  enemies: Array<PublicLivingEntity>;
   timestamp: number;
 }
