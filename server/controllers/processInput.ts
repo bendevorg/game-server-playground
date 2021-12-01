@@ -1,8 +1,6 @@
-import calculatePath from './entity/calculatePath';
-import { Map } from '../classes';
-import move from '../controllers/entity/move';
+import { Map, Player } from '../models';
 import { actions, network } from '../constants';
-import { Position, Player } from '../interfaces';
+import { Position } from '../interfaces';
 import { players } from '../cache';
 
 export default (input: Buffer, map: Map) => {
@@ -34,11 +32,11 @@ export default (input: Buffer, map: Map) => {
           z: (z * 1.0) / 100,
         };
         // We should apply the movement between last and this tick before changing paths
-        move(player, timestamp);
+        player.move(timestamp);
 
         // TODO: Maybe we shouldn't wait but put a lock on the player instead
         // And do this in another thread.
-        await calculatePath(player, position, map);
+        await player.calculatePath(position);
         player.lastMovement = timestamp;
         break;
       default:

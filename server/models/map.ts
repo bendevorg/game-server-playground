@@ -3,7 +3,7 @@ import path from 'path';
 import { map as constants } from '../constants';
 import { Node, Position } from '../interfaces';
 
-class Map {
+export default class Map {
   grid: Array<Array<Node>>;
   position: Position;
   squareSize: number;
@@ -106,5 +106,3 @@ class Map {
     return clone;
   }
 }
-
-export default Map;

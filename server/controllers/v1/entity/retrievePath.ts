@@ -15,18 +15,21 @@
  */
 
 import { Request, Response } from 'express';
-import { players } from '../../../cache';
-import { Player } from '../../../interfaces';
+import { players, enemies } from '../../../cache';
+import { LivingEntity } from '../../../models';
 
 export default async (req: Request, res: Response) => {
-  // TODO: Check if have access to get this entities path
+  // TODO: Check if have access to get this entity's path
   const { id } = req.params;
-  const player: Player | undefined = players.get<Player>(id);
-  if (!player?.path || player.path.waypoints.length === 0) {
+  let entity: LivingEntity | undefined = players.get<LivingEntity>(id);
+  if (!entity) {
+    entity = enemies.get<LivingEntity>(id);
+  }
+  if (!entity?.path || entity.path.waypoints.length === 0) {
     return res.status(404).json();
   }
-  const { position } = player;
-  const { startNodePosition, target, waypoints } = player.path;
+  const { position } = entity;
+  const { startNodePosition, target, waypoints } = entity.path;
   const timestamp = new Date().getTime();
   return res
     .status(200)

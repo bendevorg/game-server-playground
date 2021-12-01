@@ -6,7 +6,7 @@ import updatePlayerStates from '../controllers/updatePlayerStates';
 import updateEnemyStates from '../controllers/updateEnemyStates';
 import spawnEnemies from '../controllers/spawnEnemies';
 import { engine } from '../constants';
-import { Map } from '../classes';
+import { Map } from '../models';
 
 const lock = new AsyncLock();
 

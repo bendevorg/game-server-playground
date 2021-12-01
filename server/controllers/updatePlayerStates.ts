@@ -1,6 +1,5 @@
 import logger from 'log-champ';
-import moveEntity from './entity/move';
-import { Player } from '../interfaces';
+import { Player } from '../models';
 import { network } from '../constants';
 import { players as playersCache } from '../cache';
 
@@ -17,7 +16,7 @@ export default () => {
         playersCache.del(playerId);
         return;
       }
-      moveEntity(player);
+      player.move();
       playersCache.set(playerId, player);
     });
     return resolve();

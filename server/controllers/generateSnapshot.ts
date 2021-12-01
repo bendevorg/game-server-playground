@@ -1,13 +1,7 @@
 import logger from 'log-champ';
-import {
-  Snapshot,
-  Player,
-  PublicPlayer,
-  Enemy,
-  PublicEnemy,
-} from '../interfaces';
+import { Player, Enemy } from '../models';
+import { Snapshot, PublicPlayer, PublicEnemy } from '../interfaces';
 import { players as playersCache, enemies as enemiesCache } from '../cache';
-import omit from '../utils/omit';
 
 export default (): Promise<Snapshot> => {
   return new Promise<Snapshot>((resolve, reject) => {
@@ -24,13 +18,7 @@ export default (): Promise<Snapshot> => {
         logger.error('Player id in online list but not in cache');
         return;
       }
-      const publicPlayer = omit(player, [
-        'ip',
-        'lastUpdate',
-        'lastMovement',
-        'path',
-      ]);
-      players.push(publicPlayer);
+      players.push(player.retrievePublicData());
     });
     const enemies: Array<PublicEnemy> = [];
     enemyIds.forEach((enemyId) => {
@@ -39,8 +27,7 @@ export default (): Promise<Snapshot> => {
         logger.error('Player id in online list but not in cache');
         return;
       }
-      const publicEnemy = omit(enemy, ['lastUpdate', 'lastMovement', 'path']);
-      enemies.push(publicEnemy);
+      enemies.push(enemy.retrievePublicData());
     });
     return resolve({
       players,

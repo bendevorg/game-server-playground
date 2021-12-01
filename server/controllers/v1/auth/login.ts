@@ -23,25 +23,35 @@
 import { Request, Response } from 'express';
 import uuid4 from 'uuid4';
 import generateSnapshot from '../../../controllers/generateSnapshot';
-import { players } from '../../../cache';
-import { Player } from '../../../interfaces';
+import { players, maps } from '../../../cache';
+import { Player, Map } from '../../../models';
+import { game } from '../../../constants';
 
 export default async (req: Request, res: Response) => {
   // In the future this info will be returned by the select character or something like that
-
+  // TODO: Use username and password
   // TODO: Get this from the database
   const id = uuid4();
   const { ip } = req;
   const { port } = req.body;
   // TODO: Get from cache -> redis -> database
-  const player: Player | undefined = players.get<Player>(id);
-  players.set(
-    id,
-    player !== undefined
-      ? { ...player, ip, port }
-      : // TODO: Get this from the database
-        { id, ip, port, position: { x: 3, y: 0.5, z: -3 }, speed: 3 },
-  );
+  let player: any | undefined = players.get<Player>(id);
+  if (player) {
+    player.updateNetworkData(ip, port);
+  } else {
+    player = new Player({
+      id,
+      ip,
+      port,
+      position: { x: 3, y: 0.5, z: -3 },
+      speed: 3,
+    });
+    if (game.MAP_NAME) {
+      const map = maps.get<Map>(game.MAP_NAME);
+      player.setMap(map);
+    }
+  }
+  players.set(id, player);
   const snapshot = await generateSnapshot();
   return res.status(200).json({ id, snapshot });
 };

@@ -1,14 +1,14 @@
-import { Snapshot, Player } from '../interfaces';
-import generateSnapshot from './generateSnapshot';
-import sendSnapshotToPlayer from './sendSnapshotToPlayer';
-import { players as playersCache } from '../cache';
 import logger from 'log-champ';
+import { Player } from '../models';
+import { Snapshot } from '../interfaces';
+import generateSnapshot from './generateSnapshot';
+import { players as playersCache } from '../cache';
 
 export default () => {
   return new Promise<void>(async (resolve, reject) => {
-    let mainSnapshot: Snapshot;
+    let snapshot: Snapshot;
     try {
-      mainSnapshot = await generateSnapshot();
+      snapshot = await generateSnapshot();
     } catch (error) {
       logger.error(error as object);
       return reject();
@@ -20,7 +20,7 @@ export default () => {
         logger.error('Player id found in key list but not in cache');
         return;
       }
-      sendSnapshotToPlayer(player, mainSnapshot);
+      player.sendSnapshot(snapshot);
     });
     return resolve();
   });

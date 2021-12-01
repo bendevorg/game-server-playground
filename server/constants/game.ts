@@ -1,4 +1,6 @@
 export default {
   VISION_DISTANCE: 50,
+  MAX_AI_WALK_DISTANCE: 5,
   MIN_DISTANCE_FOR_NEXT_WAYPOINT: 0.2,
+  MAP_NAME: process.env.MAP_NAME,
 };

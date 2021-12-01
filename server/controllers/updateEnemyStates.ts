@@ -1,6 +1,5 @@
 import logger from 'log-champ';
-import moveEntity from './entity/move';
-import { Enemy } from '../interfaces';
+import { Enemy } from '../models';
 import { enemies as enemiesCache } from '../cache';
 
 export default () => {
@@ -12,7 +11,7 @@ export default () => {
         logger.error('Enemy id found in key list but not in cache');
         return;
       }
-      moveEntity(enemy);
+      enemy.move();
       enemiesCache.set(enemyId, enemy);
     });
     return resolve();
