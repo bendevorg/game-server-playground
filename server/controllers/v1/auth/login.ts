@@ -21,19 +21,22 @@
  */
 
 import { Request, Response } from 'express';
-import uuid4 from 'uuid4';
 import generateSnapshot from '../../../controllers/generateSnapshot';
 import { players, maps } from '../../../cache';
 import { Player, Map } from '../../../models';
 import { game } from '../../../constants';
 
+// TODO: This is a counter that will be removed once we have a database
+// To get user's ids
+let playerCounter = 0;
+
 export default async (req: Request, res: Response) => {
   // In the future this info will be returned by the select character or something like that
-  // TODO: Use username and password
-  // TODO: Get this from the database
-  const id = uuid4();
   const { ip } = req;
   const { port } = req.body;
+  // TODO: Use username and password
+  // TODO: Get this from the database
+  const id = playerCounter++;
   // TODO: Get from cache -> redis -> database
   let player: any | undefined = players.get<Player>(id);
   if (player) {

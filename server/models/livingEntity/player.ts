@@ -1,6 +1,5 @@
 import { LivingEntity } from '../';
 import {
-  Position,
   PublicLivingEntity,
   Snapshot,
   PlayerConstructor,
@@ -87,8 +86,8 @@ export default class Player extends LivingEntity {
       // Also we should improve this code, it has a lot of repetition
       playerSnapshot.players.forEach(async (player) => {
         let playerOffset = 0;
-        buffer.write(player.id, offset);
-        playerOffset += network.BUFFER_ID_SIZE;
+        buffer.writeUInt16LE(player.id, offset);
+        playerOffset += network.INT16_SIZE;
         // We multiply this by a 100 because we store this in a short (int 16) to save space
         // But that doesn't have decimals, so we multiply it here and divide on the client
         buffer.writeInt16LE(player.position.x * 100, offset + playerOffset);
@@ -112,8 +111,8 @@ export default class Player extends LivingEntity {
       offset += network.INT8_SIZE;
       playerSnapshot.enemies.forEach(async (enemy) => {
         let enemyOffset = 0;
-        buffer.write(enemy.id, offset);
-        enemyOffset += network.BUFFER_ID_SIZE;
+        buffer.writeUInt16LE(enemy.id, offset);
+        enemyOffset += network.INT16_SIZE;
         // We multiply this by a 100 because we store this in a short (int 16) to save space
         // But that doesn't have decimals, so we multiply it here and divide on the client
         buffer.writeInt16LE(enemy.position.x * 100, offset + enemyOffset);

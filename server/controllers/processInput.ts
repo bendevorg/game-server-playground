@@ -7,10 +7,8 @@ export default (input: Buffer, map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
     const timestamp = input.readDoubleLE();
     let offset = network.DOUBLE_SIZE;
-    const id = String.fromCharCode(
-      ...input.slice(offset, network.BUFFER_ID_SIZE + offset),
-    );
-    offset += network.BUFFER_ID_SIZE;
+    const id = input.readUInt16LE(offset);
+    offset += network.INT16_SIZE;
     const player = players.get<Player>(id);
     if (!player) {
       return reject('Player does not exist');

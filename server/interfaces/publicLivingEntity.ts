@@ -1,7 +1,7 @@
 import { Position } from '.';
 
 export default interface PublicLivingEntity {
-  id: string;
+  id: number;
   position: Position;
   health: number;
   maxHealth: number;

@@ -11,7 +11,7 @@ import { map as constants, game, locks, network } from '../../constants';
 import lock from '../../utils/lock';
 
 export default class LivingEntity {
-  id: string;
+  id: number;
   position: Position;
   path?: Path;
   health: number;
@@ -28,7 +28,7 @@ export default class LivingEntity {
     maxHealth,
     speed,
   }: LivingEntityConstructor) {
-    this.id = id || uuid4();
+    this.id = id;
     this.position = position;
     this.health = health;
     this.maxHealth = maxHealth;
