@@ -50,6 +50,9 @@ export default async (req: Request, res: Response) => {
       health: 10,
       maxHealth: 10,
       speed: 3,
+      attackRange: 1,
+      attackSpeed: 1,
+      visionRange: game.VISION_DISTANCE,
     });
     if (game.MAP_NAME) {
       const map = maps.get<Map>(game.MAP_NAME);

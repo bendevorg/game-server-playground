@@ -7,6 +7,7 @@ import {
 import { game, network, locks } from '../../constants';
 import socket from '../../core/socket';
 import lock from '../../utils/lock';
+import isInRange from '../../utils/isInRange';
 
 export default class Player extends LivingEntity {
   ip: string;
@@ -18,10 +19,22 @@ export default class Player extends LivingEntity {
     health,
     maxHealth,
     speed,
+    attackRange,
+    attackSpeed,
+    visionRange,
     ip,
     port,
   }: PlayerConstructor) {
-    super({ id, position, health, maxHealth, speed });
+    super({
+      id,
+      position,
+      health,
+      maxHealth,
+      speed,
+      attackRange,
+      attackSpeed,
+      visionRange,
+    });
     this.ip = ip;
     this.port = port;
   }
@@ -43,21 +56,12 @@ export default class Player extends LivingEntity {
       // In another async task, this avoid concurrency errors
       await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
         // Filter only visible players and monsters
-        visiblePlayers = snapshot.players.filter((otherPlayer) => {
-          return (
-            Math.abs(this.position.x - otherPlayer.position.x) <=
-              game.VISION_DISTANCE &&
-            Math.abs(this.position.z - otherPlayer.position.z) <=
-              game.VISION_DISTANCE
-          );
-        });
-        visibleEnemies = snapshot.enemies.filter((enemy) => {
-          return (
-            Math.abs(this.position.x - enemy.position.x) <=
-              game.VISION_DISTANCE &&
-            Math.abs(this.position.z - enemy.position.z) <= game.VISION_DISTANCE
-          );
-        });
+        visiblePlayers = snapshot.players.filter(({ position }) =>
+          isInRange(this.position, position, game.VISION_DISTANCE),
+        );
+        visibleEnemies = snapshot.enemies.filter(({ position }) =>
+          isInRange(this.position, position, game.VISION_DISTANCE),
+        );
         done();
       });
       const playerSnapshot = {

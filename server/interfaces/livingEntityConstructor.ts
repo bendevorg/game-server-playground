@@ -6,4 +6,7 @@ export default interface LivingEntityConstructor {
   health: number;
   maxHealth: number;
   speed: number;
+  attackRange: number;
+  attackSpeed: number;
+  visionRange: number;
 }

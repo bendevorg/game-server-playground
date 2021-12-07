@@ -1,15 +1,10 @@
-import { LivingEntity } from '../';
+import { LivingEntity, Player } from '../';
+import { State } from '../livingEntity';
 import lock from '../../utils/lock';
 import { game, locks } from '../../constants';
-
-enum State {
-  STAND_BY = 0,
-  MOVING = 1,
-}
+import { players } from '../../cache';
 
 export default class Enemy extends LivingEntity {
-  previousState: State = State.STAND_BY;
-  state: State = State.STAND_BY;
   calculatingNextPath = false;
   nextTimeToMove = 0;
 
@@ -20,6 +15,16 @@ export default class Enemy extends LivingEntity {
 
   ai() {
     this.updateState();
+    if (this.target) {
+      return;
+    }
+    if (!this.target && players.keys().length > 0) {
+      const player = players.get<Player>(players.keys()[0]);
+      if (player) {
+        this.setupAttack(player);
+        return;
+      }
+    }
     if (this.state === State.MOVING) {
       return;
     }
@@ -37,15 +42,6 @@ export default class Enemy extends LivingEntity {
     // And that takes a while, we handle things with locks and once that is done
     // We will start moving
     this.moveToRandom();
-  }
-
-  updateState() {
-    this.previousState = this.state;
-    if (this.path && this.path.waypoints.length > 0) {
-      this.state = State.MOVING;
-      return;
-    }
-    this.state = State.STAND_BY;
   }
 
   async moveToRandom() {
@@ -72,8 +68,7 @@ export default class Enemy extends LivingEntity {
       this.calculatingNextPath = false;
       return;
     }
-    await this.calculatePath(nodeToWalkTo.position);
-    this.setLastMovement();
+    await this.setupMovement(nodeToWalkTo.position);
     this.calculatingNextPath = false;
   }
 }

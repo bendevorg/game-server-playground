@@ -1,4 +1,3 @@
-import uuid4 from 'uuid4';
 import { Map } from '../';
 import {
   Path,
@@ -7,18 +6,34 @@ import {
   PublicLivingEntity,
   LivingEntityConstructor,
 } from '../../interfaces';
-import { map as constants, game, locks, network } from '../../constants';
+import { map as constants, game, locks } from '../../constants';
 import lock from '../../utils/lock';
+import isInRange from '../../utils/isInRange';
+
+export enum State {
+  STAND_BY = 0,
+  MOVING = 1,
+  MOVING_TO_ATTACK = 2,
+  ATTACKING = 3,
+}
 
 export default class LivingEntity {
+  previousState: State = State.STAND_BY;
+  state: State = State.STAND_BY;
   id: number;
   position: Position;
   path?: Path;
   health: number;
   maxHealth: number;
   speed: number;
+  attackRange: number;
+  attackSpeed: number;
+  visionRange: number;
+  target?: LivingEntity;
   lastUpdate: number;
   lastMovement: number;
+  lastPathAttackUpdate: number;
+  timeForNextAttack: number;
   map?: Map;
 
   constructor({
@@ -27,14 +42,24 @@ export default class LivingEntity {
     health,
     maxHealth,
     speed,
+    attackRange,
+    attackSpeed,
+    visionRange,
   }: LivingEntityConstructor) {
     this.id = id;
     this.position = position;
     this.health = health;
     this.maxHealth = maxHealth;
     this.speed = speed;
-    this.lastUpdate = new Date().getTime();
-    this.lastMovement = new Date().getTime();
+    this.attackRange = attackRange;
+    this.attackSpeed = attackSpeed;
+    this.visionRange = visionRange;
+    this.target = undefined;
+    const now = new Date().getTime();
+    this.lastUpdate = now;
+    this.lastMovement = now;
+    this.lastPathAttackUpdate = now;
+    this.timeForNextAttack = now;
   }
 
   setMap(map: Map) {
@@ -49,8 +74,15 @@ export default class LivingEntity {
     this.lastMovement = timestamp || new Date().getTime();
   }
 
+  setLastPathUpdate() {
+    this.lastPathAttackUpdate =
+      new Date().getTime() + game.TIME_BETWEEN_PATH_UPDATES;
+  }
+
   update() {
+    this.updateState();
     this.move();
+    this.attack();
   }
 
   retrievePublicData() {
@@ -66,6 +98,27 @@ export default class LivingEntity {
         done();
       });
     });
+  }
+
+  updateState() {
+    this.previousState = this.state;
+    if (this.target) {
+      if (!isInRange(this.position, this.target.position, this.visionRange)) {
+        this.state = State.STAND_BY;
+        this.target = undefined;
+        return;
+      }
+      if (!isInRange(this.position, this.target.position, this.attackRange)) {
+        this.state = State.MOVING_TO_ATTACK;
+        return;
+      }
+      this.state = State.ATTACKING;
+    }
+    if (this.path && this.path.waypoints.length > 0) {
+      this.state = State.MOVING;
+      return;
+    }
+    this.state = State.STAND_BY;
   }
 
   calculatePath(target: Position) {
@@ -272,35 +325,90 @@ export default class LivingEntity {
         }
 
         const now = new Date().getTime();
+        // If we are attacking let's see if we are in range
         if (
-          magnitude <= game.MIN_DISTANCE_FOR_NEXT_WAYPOINT &&
-          this.path.waypoints.length === 1
+          this.target &&
+          this.path.waypoints.length === 1 &&
+          magnitude <= this.attackRange
         ) {
-          this.position = {
-            ...this.position,
-            x: this.path.waypoints[0].x,
-            z: this.path.waypoints[0].z,
-          };
-          this.path.waypoints.pop();
+          this.path = undefined;
         } else {
-          const directionX = distanceX / magnitude;
-          const directionZ = distanceZ / magnitude;
-          const timeSinceLastUpdate =
-            ((currentTimestamp || now) - this.lastMovement) / 1000;
-          const distanceToMoveInX =
-            directionX * this.speed * timeSinceLastUpdate;
-          const distanceToMoveInZ =
-            directionZ * this.speed * timeSinceLastUpdate;
-          this.position = {
-            ...this.position,
-            x: this.position.x + distanceToMoveInX,
-            z: this.position.z + distanceToMoveInZ,
-          };
+          if (
+            magnitude <= game.MIN_DISTANCE_FOR_NEXT_WAYPOINT &&
+            this.path.waypoints.length === 1
+          ) {
+            this.position = {
+              ...this.position,
+              x: this.path.waypoints[0].x,
+              z: this.path.waypoints[0].z,
+            };
+            this.path.waypoints.pop();
+          } else {
+            const directionX = distanceX / magnitude;
+            const directionZ = distanceZ / magnitude;
+            const timeSinceLastUpdate =
+              ((currentTimestamp || now) - this.lastMovement) / 1000;
+            const distanceToMoveInX =
+              directionX * this.speed * timeSinceLastUpdate;
+            const distanceToMoveInZ =
+              directionZ * this.speed * timeSinceLastUpdate;
+            this.position = {
+              ...this.position,
+              x: this.position.x + distanceToMoveInX,
+              z: this.position.z + distanceToMoveInZ,
+            };
+          }
         }
         this.setLastMovement(now);
         done();
       });
       done();
     });
+  }
+
+  async setupMovement(position: Position, timestamp?: number) {
+    this.target = undefined;
+    await this.calculatePath(position);
+    // This last movement is assigned here so in the next server tick
+    // After the path is calculated we will move taking into account the time
+    // Between this timestamp and the future tick timestamp
+    this.setLastMovement(timestamp);
+  }
+
+  async attack() {
+    if (!this.target) {
+      return;
+    }
+    if (!isInRange(this.position, this.target.position, this.visionRange)) {
+      this.target = undefined;
+      return;
+    }
+    if (!isInRange(this.position, this.target.position, this.attackRange)) {
+      if (
+        !this.path ||
+        this.path.waypoints.length < 0 ||
+        (this.path.target.x !== this.target.position.x &&
+          this.path.target.z !== this.target.position.z)
+      ) {
+        const now = new Date().getTime();
+        if (now > this.lastPathAttackUpdate) {
+          this.calculatePath(this.target.position);
+          this.setLastPathUpdate();
+          this.setLastMovement(now);
+        }
+        return;
+      }
+    }
+  }
+
+  async setupAttack(target: LivingEntity, timestamp?: number) {
+    if (!isInRange(this.position, target.position, this.visionRange)) {
+      return;
+    }
+    if (!isInRange(this.position, target.position, this.attackRange)) {
+      await this.calculatePath(target.position);
+      this.setLastMovement(timestamp);
+    }
+    this.target = target;
   }
 }

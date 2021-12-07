@@ -1,7 +1,7 @@
-import { Map, Player } from '../models';
+import { Map, Player, Enemy } from '../models';
 import { actions, network } from '../constants';
 import { Position } from '../interfaces';
-import { players } from '../cache';
+import { players, enemies } from '../cache';
 
 export default (input: Buffer, map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
@@ -30,12 +30,29 @@ export default (input: Buffer, map: Map) => {
           z: (z * 1.0) / 100,
         };
         // We should apply the movement between last and this tick before changing paths
-        player.move(timestamp);
+        await player.move(timestamp);
 
         // We don't wait for this but living entity internally uses locks to
         // guarantee that we won't have collisions when accessing things
         player.calculatePath(position);
-        player.lastMovement = timestamp;
+        // // This last movement is assigned here so in the next server tick
+        // // After the path is calculated we will move taking into account the time
+        // // Between this timestamp and the future tick timestamp
+        player.setLastMovement(timestamp);
+        break;
+      case actions.ATTACK:
+        const targetId = input.readUInt16LE(offset);
+        const target = enemies.get<Enemy>(targetId);
+        if (!target) {
+          return reject('Invalid target');
+        }
+        // We should apply the movement between last and this tick before changing paths
+        await player.move(timestamp);
+        player.setupAttack(target);
+        // This last movement is assigned here so in the next server tick
+        // After the path is calculated we will move taking into account the time
+        // Between this timestamp and the future tick timestamp
+        player.setLastMovement(timestamp);
         break;
       default:
         return reject('Invalid action');
