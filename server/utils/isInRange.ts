@@ -1,4 +1,4 @@
-import { Position } from '../interfaces';
+import { Position } from '~/interfaces';
 
 export default (
   positionA: Position,

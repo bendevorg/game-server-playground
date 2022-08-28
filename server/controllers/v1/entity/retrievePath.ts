@@ -15,8 +15,8 @@
  */
 
 import { Request, Response } from 'express';
-import { players, enemies } from '../../../cache';
-import { LivingEntity } from '../../../models';
+import { players, enemies } from '~/cache';
+import { LivingEntity } from '~/models';
 
 export default async (req: Request, res: Response) => {
   // TODO: Check if have access to get this entity's path

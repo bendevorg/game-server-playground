@@ -1,8 +1,8 @@
 import { LivingEntity, Player } from '../';
 import { State } from '../livingEntity';
-import lock from '../../utils/lock';
-import { game, locks } from '../../constants';
-import { players } from '../../cache';
+import lock from '~/utils/lock';
+import { game, locks } from '~/constants';
+import { players } from '~/cache';
 
 export default class Enemy extends LivingEntity {
   calculatingNextPath = false;

@@ -1,6 +1,6 @@
 import express from 'express';
-import retrieveControllers from '../../../utils/retrieveControllers';
-import retrieveSchemas from '../../../utils/retrieveSchemas';
+import retrieveControllers from '~/utils/retrieveControllers';
+import retrieveSchemas from '~/utils/retrieveSchemas';
 
 const router = express.Router();
 const routerName = __filename.split(/\\routers|\/routers/)[1].split('.')[0];

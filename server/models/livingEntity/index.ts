@@ -5,10 +5,10 @@ import {
   Node,
   PublicLivingEntity,
   LivingEntityConstructor,
-} from '../../interfaces';
-import { map as constants, game, locks } from '../../constants';
-import lock from '../../utils/lock';
-import isInRange from '../../utils/isInRange';
+} from '~/interfaces';
+import { map as constants, game, locks } from '~/constants';
+import lock from '~/utils/lock';
+import isInRange from '~/utils/isInRange';
 
 export enum State {
   STAND_BY = 0,

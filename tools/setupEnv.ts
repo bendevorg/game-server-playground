@@ -2,10 +2,11 @@
 /* eslint-disable global-require */
 /* eslint-disable import/no-dynamic-require */
 
+import 'module-alias/register';
 import fs, { Stats } from 'fs';
 import path from 'path';
 import readline from 'readline';
-import { IStringDictionary } from '../server/interfaces';
+import { IStringDictionary } from '~/interfaces';
 
 const filename = '.env';
 const file = path.resolve(`${process.cwd()}/${filename}`);

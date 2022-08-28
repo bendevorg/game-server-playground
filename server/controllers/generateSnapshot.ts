@@ -1,7 +1,7 @@
 import logger from 'log-champ';
-import { Player, Enemy } from '../models';
-import { Snapshot, PublicLivingEntity } from '../interfaces';
-import { players as playersCache, enemies as enemiesCache } from '../cache';
+import { Player, Enemy } from '~/models';
+import { Snapshot, PublicLivingEntity } from '~/interfaces';
+import { players as playersCache, enemies as enemiesCache } from '~/cache';
 
 export default (): Promise<Snapshot> => {
   return new Promise<Snapshot>(async (resolve, reject) => {

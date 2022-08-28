@@ -1,8 +1,8 @@
 import logger from 'log-champ';
-import { Player } from '../models';
-import { Snapshot } from '../interfaces';
-import generateSnapshot from './generateSnapshot';
-import { players as playersCache } from '../cache';
+import { Player } from '~/models';
+import { Snapshot } from '~/interfaces';
+import generateSnapshot from '~/controllers/generateSnapshot';
+import { players as playersCache } from '~/cache';
 
 export default () => {
   return new Promise<void>(async (resolve, reject) => {

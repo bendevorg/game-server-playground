@@ -1,7 +1,7 @@
 import uuid4 from 'uuid4';
-import { Enemy, Map } from '../models';
-import { enemies as enemiesCache } from '../cache';
-import { game } from '../constants';
+import { Enemy, Map } from '~/models';
+import { enemies as enemiesCache } from '~/cache';
+import { game } from '~/constants';
 
 // TODO: Thil will be overwritten
 let enemyCounter = 0;

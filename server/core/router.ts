@@ -2,8 +2,8 @@ import path from 'path';
 import express from 'express';
 import bodyParser from 'body-parser';
 import logger from 'log-champ';
-import retrieveRouters from '../utils/retrieveRouters';
-import errorMiddleware from '../middlewares/errorMiddleware';
+import retrieveRouters from '~/utils/retrieveRouters';
+import errorMiddleware from '~/middlewares/errorMiddleware';
 
 const routersPath = path.resolve(__dirname, './routers');
 

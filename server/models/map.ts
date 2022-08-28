@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { map as constants, map } from '../constants';
-import { Node, Position } from '../interfaces';
+import { map as constants, map } from '~/constants';
+import { Node, Position } from '~/interfaces';
 
 export default class Map {
   grid: Array<Array<Node>>;
@@ -132,11 +132,19 @@ export default class Map {
     while (tentatives < 5) {
       const cellsRange = Math.ceil(range / this.squareSize);
       const minRow = Math.max(0, center.gridPosition.y - cellsRange);
-      const maxRow = Math.min(this.grid.length - 1, center.gridPosition.y + cellsRange);
+      const maxRow = Math.min(
+        this.grid.length - 1,
+        center.gridPosition.y + cellsRange,
+      );
       const minColumn = Math.max(0, center.gridPosition.x - cellsRange);
-      const maxColumn = Math.min(this.grid[0].length - 1, center.gridPosition.x + cellsRange);
+      const maxColumn = Math.min(
+        this.grid[0].length - 1,
+        center.gridPosition.x + cellsRange,
+      );
       const row = Math.floor(Math.random() * (maxRow - minRow + 1) + minRow);
-      const column = Math.floor(Math.random() * (maxColumn - minColumn + 1) + minColumn);
+      const column = Math.floor(
+        Math.random() * (maxColumn - minColumn + 1) + minColumn,
+      );
       if (this.grid[row][column].type === map.GROUND_TILE) {
         return this.grid[row][column];
       }

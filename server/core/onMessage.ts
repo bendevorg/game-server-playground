@@ -1,6 +1,6 @@
 import { RemoteInfo } from 'dgram';
-import { network } from '../constants';
-import inputQueue from '../utils/inputQueue';
+import { network } from '~/constants';
+import inputQueue from '~/utils/inputQueue';
 
 export default (buffer: Buffer, senderInfo: RemoteInfo) => {
   if (buffer.length === 0) {

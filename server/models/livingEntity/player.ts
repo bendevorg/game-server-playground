@@ -1,13 +1,9 @@
 import { LivingEntity } from '../';
-import {
-  PublicLivingEntity,
-  Snapshot,
-  PlayerConstructor,
-} from '../../interfaces';
-import { game, network, locks } from '../../constants';
-import socket from '../../core/socket';
-import lock from '../../utils/lock';
-import isInRange from '../../utils/isInRange';
+import { PublicLivingEntity, Snapshot, PlayerConstructor } from '~/interfaces';
+import { game, network, locks } from '~/constants';
+import socket from '~/core/socket';
+import lock from '~/utils/lock';
+import isInRange from '~/utils/isInRange';
 
 export default class Player extends LivingEntity {
   ip: string;

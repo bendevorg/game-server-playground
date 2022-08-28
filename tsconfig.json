@@ -18,10 +18,18 @@
     "declaration": true, // Generate corresponding .d.ts file
     "experimentalDecorators": true, // Enables experimental support for ES decorators
     // "incremental": true, // Enable incremental compilation by reading/writing information from prior compilations to a file on disk
-    "noFallthroughCasesInSwitch": true // Report errors for fallthrough cases in switch statement
+    "noFallthroughCasesInSwitch": true, // Report errors for fallthrough cases in switch statement
+    "incremental": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./server/*"]
+    }
   },
   "include": [
     "server/**/*",
+    "**/*.ts",
+    "**/*.tsx",
     "tools/**/*",
     ".credentials/**/*" // *** The files TypeScript should type check ***
   ],

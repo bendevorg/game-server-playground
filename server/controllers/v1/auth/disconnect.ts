@@ -19,7 +19,7 @@
  */
 
 import { Request, Response } from 'express';
-import { players } from '../../../cache';
+import { players } from '~/cache';
 
 export default async (req: Request, res: Response) => {
   // TODO: We should never receive the ID like this of course

@@ -5,7 +5,7 @@
 import path from 'path';
 import fs from 'fs';
 import logger from 'log-champ';
-import { IModuleDictionary } from '../interfaces';
+import { IModuleDictionary } from '~/interfaces';
 
 /**
  * Retrieve controllers
@@ -33,7 +33,7 @@ export default (filename: string) => {
         controllers[file.split('.')[0]] = module;
       }
     });
-  } catch (err) {
+  } catch (err: any) {
     logger.error(err);
   }
 

@@ -1,7 +1,7 @@
-import { Map, Player, Enemy } from '../models';
-import { actions, network } from '../constants';
-import { Position } from '../interfaces';
-import { players, enemies } from '../cache';
+import { Map, Player, Enemy } from '~/models';
+import { actions, network } from '~/constants';
+import { Position } from '~/interfaces';
+import { players, enemies } from '~/cache';
 
 export default (input: Buffer, map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
@@ -35,9 +35,10 @@ export default (input: Buffer, map: Map) => {
         // We don't wait for this but living entity internally uses locks to
         // guarantee that we won't have collisions when accessing things
         player.calculatePath(position);
-        // // This last movement is assigned here so in the next server tick
-        // // After the path is calculated we will move taking into account the time
-        // // Between this timestamp and the future tick timestamp
+        // This last movement is assigned here so in the next server tick
+        // After the path is calculated we will move taking into account the time
+        // Between this timestamp and the future tick timestamp
+        // TODO: player.move already sets last movement, do we really need this here?
         player.setLastMovement(timestamp);
         break;
       case actions.ATTACK:
@@ -52,6 +53,7 @@ export default (input: Buffer, map: Map) => {
         // This last movement is assigned here so in the next server tick
         // After the path is calculated we will move taking into account the time
         // Between this timestamp and the future tick timestamp
+        // TODO: player.move already sets last movement, do we really need this here?
         player.setLastMovement(timestamp);
         break;
       default:

@@ -1,6 +1,6 @@
 import logger from 'log-champ';
-import { Enemy } from '../models';
-import { enemies as enemiesCache } from '../cache';
+import { Enemy } from '~/models';
+import { enemies as enemiesCache } from '~/cache';
 
 export default () => {
   return new Promise<void>(async (resolve, reject) => {

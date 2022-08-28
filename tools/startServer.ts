@@ -1,16 +1,17 @@
 /* eslint-disable no-console */
+import 'module-alias/register';
 import { exit } from 'process';
 import dotenv from 'dotenv';
 dotenv.config();
 
-import socket from '../server/core/socket';
+import socket from '~/core/socket';
 import express from 'express';
-import router from '../server/core/router';
-import Map from '../server/models/map';
-import onMessage from '../server/core/onMessage';
-import gameLoop from '../server/core/gameLoop';
-import { game } from '../server/constants';
-import { maps } from '../server/cache';
+import router from '~/core/router';
+import Map from '~/models/map';
+import onMessage from '~/core/onMessage';
+import gameLoop from '~/core/gameLoop';
+import { game } from '~/constants';
+import { maps } from '~/cache';
 
 const { PORT } = process.env;
 const app = express();

@@ -1,12 +1,12 @@
-import inputQueue from '../utils/inputQueue';
-import sendSnapshots from '../controllers/sendSnapshots';
-import processInput from '../controllers/processInput';
-import updatePlayerStates from '../controllers/updatePlayerStates';
-import updateEnemyStates from '../controllers/updateEnemyStates';
-import spawnEnemies from '../controllers/spawnEnemies';
-import lock from '../utils/lock';
-import { engine, locks } from '../constants';
-import { Map } from '../models';
+import inputQueue from '~/utils/inputQueue';
+import sendSnapshots from '~/controllers/sendSnapshots';
+import processInput from '~/controllers/processInput';
+import updatePlayerStates from '~/controllers/updatePlayerStates';
+import updateEnemyStates from '~/controllers/updateEnemyStates';
+import spawnEnemies from '~/controllers/spawnEnemies';
+import lock from '~/utils/lock';
+import { engine, locks } from '~/constants';
+import { Map } from '~/models';
 
 // I don't like passing the map as a parameter
 const gameLoop = async (map: Map) => {

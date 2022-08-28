@@ -15,7 +15,7 @@
     "server_production": "node -r dotenv/config dist/tools/startServer.js",
     "docker_production": "docker-compose build --build-arg environment=prd && docker-compose up --abort-on-container-exit",
     "env_setup_development": "ts-node tools/setupEnv.ts development",
-    "server_development": "nodemon tools/startServer.ts",
+    "server_development": "ts-node-dev --respawn tools/startServer.ts",
     "docker_dev": "docker-compose build --build-arg environment=dev && docker-compose up --abort-on-container-exit",
     "test": "npm run env_setup_development && nyc --reporter=html --reporter=text mocha test/runTests.js --timeout 10000",
     "docker_test": "docker-compose build --build-arg environment=test && docker-compose up --abort-on-container-exit",
@@ -26,14 +26,20 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "async-lock": "1.3.0",
-    "dotenv": "^10.0.0",
+    "async-lock": "1.3.2",
+    "dotenv": "16.0.1",
+    "express": "4.18.1",
+    "hashids": "2.2.10",
+    "joi": "17.6.0",
     "log-champ": "2.0.2",
-    "node-cache": "5.1.2"
+    "module-alias": "2.2.2",
+    "node-cache": "5.1.2",
+    "uuid4": "2.0.3"
   },
   "devDependencies": {
     "@types/async-lock": "1.1.3",
-    "@types/node": "16.4.7",
+    "@types/express": "4.17.13",
+    "@types/node": "18.7.6",
     "@types/uuid4": "2.0.0",
     "@typescript-eslint/eslint-plugin": "4.28.5",
     "@typescript-eslint/parser": "4.28.5",
@@ -54,7 +60,11 @@
     "nodemon": "^2.0.12",
     "nyc": "15.1.0",
     "supertest": "6.1.4",
-    "ts-node": "10.1.0",
-    "typescript": "4.3.5"
+    "ts-node": "10.9.1",
+    "ts-node-dev": "2.0.0",
+    "typescript": "4.7.4"
+  },
+  "_moduleAliases": {
+    "~": "./server"
   }
 }

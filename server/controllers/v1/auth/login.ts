@@ -21,10 +21,10 @@
  */
 
 import { Request, Response } from 'express';
-import generateSnapshot from '../../../controllers/generateSnapshot';
-import { players, maps } from '../../../cache';
-import { Player, Map } from '../../../models';
-import { game } from '../../../constants';
+import generateSnapshot from '~/controllers/generateSnapshot';
+import { players, maps } from '~/cache';
+import { Player, Map } from '~/models';
+import { game } from '~/constants';
 
 // TODO: This is a counter that will be removed once we have a database
 // To get user's ids

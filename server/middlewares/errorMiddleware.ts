@@ -9,7 +9,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { errors, messages } from '../constants';
+import { errors, messages } from '~/constants';
 
 // eslint-disable-next-line
 export default (
