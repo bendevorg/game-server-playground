@@ -1,7 +1,6 @@
 import { Map, Player, Enemy } from '~/models';
 import { actions, network } from '~/constants';
 import { Position } from '~/interfaces';
-import { players, enemies } from '~/cache';
 
 export default (input: Buffer, map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
@@ -9,7 +8,7 @@ export default (input: Buffer, map: Map) => {
     let offset = network.DOUBLE_SIZE;
     const id = input.readUInt16LE(offset);
     offset += network.INT16_SIZE;
-    const player = players.get<Player>(id);
+    const player = Player.get(id);
     if (!player) {
       return reject('Player does not exist');
     }
@@ -43,7 +42,7 @@ export default (input: Buffer, map: Map) => {
         break;
       case actions.ATTACK:
         const targetId = input.readUInt16LE(offset);
-        const target = enemies.get<Enemy>(targetId);
+        const target = Enemy.get(targetId);
         if (!target) {
           return reject('Invalid target');
         }
@@ -60,7 +59,7 @@ export default (input: Buffer, map: Map) => {
         return reject('Invalid action');
     }
     player.lastUpdate = timestamp;
-    players.set(id, player);
+    Player.set(id, player);
     return resolve();
   });
 };

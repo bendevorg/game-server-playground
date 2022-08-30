@@ -22,9 +22,9 @@
 
 import { Request, Response } from 'express';
 import generateSnapshot from '~/controllers/generateSnapshot';
-import { players, maps } from '~/cache';
 import { Player, Map } from '~/models';
 import { game } from '~/constants';
+import { UnexpectedError } from '~/errors';
 
 // TODO: This is a counter that will be removed once we have a database
 // To get user's ids
@@ -37,8 +37,7 @@ export default async (req: Request, res: Response) => {
   // TODO: Use username and password
   // TODO: Get this from the database
   const id = playerCounter++;
-  // TODO: Get from cache -> redis -> database
-  let player: any | undefined = players.get<Player>(id);
+  let player = Player.get(id);
   if (player) {
     player.updateNetworkData(ip, port);
   } else {
@@ -55,11 +54,14 @@ export default async (req: Request, res: Response) => {
       visionRange: game.VISION_DISTANCE,
     });
     if (game.MAP_NAME) {
-      const map = maps.get<Map>(game.MAP_NAME);
+      const map = Map.get(game.MAP_NAME);
+      if (!map) {
+        throw new UnexpectedError('Map not found.');
+      }
       player.setMap(map);
     }
   }
-  players.set(id, player);
+  Player.set(id, player);
   const snapshot = await generateSnapshot();
   return res.status(200).json({ id, snapshot });
 };

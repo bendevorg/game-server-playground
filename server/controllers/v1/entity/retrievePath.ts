@@ -15,15 +15,14 @@
  */
 
 import { Request, Response } from 'express';
-import { players, enemies } from '~/cache';
-import { LivingEntity } from '~/models';
+import { Player, Enemy } from '~/models';
 
 export default async (req: Request, res: Response) => {
   // TODO: Check if have access to get this entity's path
   const { id } = req.params;
-  let entity: LivingEntity | undefined = players.get<LivingEntity>(id);
+  let entity: Player | Enemy | null = Player.get(id);
   if (!entity) {
-    entity = enemies.get<LivingEntity>(id);
+    entity = Enemy.get(id);
   }
   if (!entity?.path || entity.path.waypoints.length === 0) {
     return res.status(404).json();

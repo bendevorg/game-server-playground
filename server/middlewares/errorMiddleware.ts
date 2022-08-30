@@ -23,6 +23,10 @@ export default (
       return res.status(400).json({
         data: err.details[0].message,
       });
+    case errors.name.UNEXPECTED_ERROR:
+      return res.status(503).json({
+        data: err.message,
+      });
     default:
       return res.status(500).json({
         data: messages.error.UNEXPECTED_RUNNING,

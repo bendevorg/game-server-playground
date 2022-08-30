@@ -1,18 +1,17 @@
 import logger from 'log-champ';
 import { Enemy } from '~/models';
-import { enemies as enemiesCache } from '~/cache';
 
 export default () => {
   return new Promise<void>(async (resolve, reject) => {
-    const enemies = enemiesCache.keys();
+    const enemies = Enemy.getAllActiveIds();
     enemies.forEach((enemyId) => {
-      const enemy = enemiesCache.get<Enemy>(enemyId);
+      const enemy = Enemy.get(enemyId);
       if (!enemy) {
         logger.error('Enemy id found in key list but not in cache');
         return;
       }
       enemy.update();
-      enemiesCache.set(enemyId, enemy);
+      Enemy.set(enemyId, enemy);
     });
     return resolve();
   });

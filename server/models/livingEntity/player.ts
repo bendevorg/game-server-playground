@@ -4,6 +4,7 @@ import { game, network, locks } from '~/constants';
 import socket from '~/core/socket';
 import lock from '~/utils/lock';
 import isInRange from '~/utils/isInRange';
+import { players } from '~/cache';
 
 export default class Player extends LivingEntity {
   ip: string;
@@ -33,6 +34,21 @@ export default class Player extends LivingEntity {
     });
     this.ip = ip;
     this.port = port;
+  }
+
+  // TODO: Id will be a string eventually
+  static get(id: number | string): Player | null {
+    let player: Player | undefined = players.get<Player>(id);
+    return player || null;
+  }
+
+  static getAllActiveIds(): Array<string> {
+    return players.keys();
+  }
+
+  // TODO: Id will be a string eventually
+  static set(id: number | string, player: Player) {
+    players.set(id, player);
   }
 
   update() {

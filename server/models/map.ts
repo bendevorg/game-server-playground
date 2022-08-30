@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { map as constants, map } from '~/constants';
 import { Node, Position } from '~/interfaces';
+import { maps } from '~/cache';
 
 export default class Map {
   grid: Array<Array<Node>>;
@@ -21,6 +22,10 @@ export default class Map {
     this.squareSize = mapFile.squareSize;
     this.enemies = mapFile.enemies;
     this.setupNeighbors();
+  }
+
+  static get(name: string) {
+    return maps.get<Map>(name);
   }
 
   setupNeighbors() {

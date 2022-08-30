@@ -2,11 +2,26 @@ import { LivingEntity, Player } from '../';
 import { State } from '../livingEntity';
 import lock from '~/utils/lock';
 import { game, locks } from '~/constants';
-import { players } from '~/cache';
+import { enemies } from '~/cache';
 
 export default class Enemy extends LivingEntity {
   calculatingNextPath = false;
   nextTimeToMove = 0;
+
+  // TODO: Id will be a string eventually
+  static get(id: number | string): Enemy | null {
+    let enemy: Enemy | undefined = enemies.get<Enemy>(id);
+    return enemy || null;
+  }
+
+  static getAllActiveIds(): Array<string> {
+    return enemies.keys();
+  }
+
+  // TODO: Id will be a string eventually
+  static set(id: number | string, enemy: Enemy) {
+    enemies.set(id, enemy);
+  }
 
   update() {
     this.ai();
@@ -18,8 +33,10 @@ export default class Enemy extends LivingEntity {
     if (this.target) {
       return;
     }
-    if (!this.target && players.keys().length > 0) {
-      const player = players.get<Player>(players.keys()[0]);
+    // TODO: Actual AI
+    const players = Player.getAllActiveIds();
+    if (!this.target && players.length > 0) {
+      const player = Player.get(players[0]);
       if (player) {
         this.setupAttack(player);
         return;
