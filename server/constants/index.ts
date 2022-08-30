@@ -7,3 +7,4 @@ export { default as messages } from './messages';
 export { default as network } from './network';
 export { default as map } from './map';
 export { default as locks } from './locks';
+export { default as redis } from './redis';

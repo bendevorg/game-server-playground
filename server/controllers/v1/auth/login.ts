@@ -35,33 +35,20 @@ export default async (req: Request, res: Response) => {
   const { ip } = req;
   const { port } = req.body;
   // TODO: Use username and password
-  // TODO: Get this from the database
   const id = playerCounter++;
-  let player = Player.get(id);
-  if (player) {
-    player.updateNetworkData(ip, port);
-  } else {
-    player = new Player({
-      id,
-      ip,
-      port,
-      position: { x: 3, y: 0.5, z: -3 },
-      health: 10,
-      maxHealth: 10,
-      speed: 3,
-      attackRange: 1,
-      attackSpeed: 1,
-      visionRange: game.VISION_DISTANCE,
-    });
-    if (game.MAP_NAME) {
-      const map = Map.get(game.MAP_NAME);
-      if (!map) {
-        throw new UnexpectedError('Map not found.');
-      }
-      player.setMap(map);
-    }
+  const player = await Player.get(id);
+  if (!player) {
+    return res.status(404).json();
   }
-  Player.set(id, player);
+  player.updateNetworkData(ip, port);
+  if (player.mapId) {
+    const map = Map.get(player.mapId);
+    if (!map) {
+      throw new UnexpectedError('Map not found.');
+    }
+    player.setMap(map);
+  }
+  player.save();
   const snapshot = await generateSnapshot();
   return res.status(200).json({ id, snapshot });
 };

@@ -5,6 +5,7 @@ import { Node, Position } from '~/interfaces';
 import { maps } from '~/cache';
 
 export default class Map {
+  id: string;
   grid: Array<Array<Node>>;
   position: Position;
   squareSize: number;
@@ -17,6 +18,7 @@ export default class Map {
         encoding: 'utf-8',
       }),
     );
+    this.id = mapName;
     this.grid = mapFile.grid;
     this.position = mapFile.position;
     this.squareSize = mapFile.squareSize;

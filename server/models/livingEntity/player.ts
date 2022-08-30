@@ -1,8 +1,9 @@
 import { LivingEntity } from '../';
 import { PublicLivingEntity, Snapshot, PlayerConstructor } from '~/interfaces';
-import { game, network, locks } from '~/constants';
+import { game, network, locks, redis as redisConstants } from '~/constants';
 import socket from '~/core/socket';
 import lock from '~/utils/lock';
+import redis from '~/utils/redis';
 import isInRange from '~/utils/isInRange';
 import { players } from '~/cache';
 
@@ -19,6 +20,7 @@ export default class Player extends LivingEntity {
     attackRange,
     attackSpeed,
     visionRange,
+    mapId,
     ip,
     port,
   }: PlayerConstructor) {
@@ -31,24 +33,83 @@ export default class Player extends LivingEntity {
       attackRange,
       attackSpeed,
       visionRange,
+      mapId,
     });
     this.ip = ip;
     this.port = port;
   }
 
   // TODO: Id will be a string eventually
-  static get(id: number | string): Player | null {
+  static async get(id: number): Promise<Player | null> {
     let player: Player | undefined = players.get<Player>(id);
+    if (!player) {
+      const key = redisConstants.PLAYERS_KEY_PREFIX + id;
+      await lock.acquire(locks.REDIS_PLAYER + id, async (done) => {
+        const jsonPlayerData = await redis.get(key);
+        if (jsonPlayerData) {
+          const playerData = JSON.parse(jsonPlayerData);
+          player = new Player(playerData);
+        }
+        done();
+      });
+    }
+    if (!player) {
+      // TODO: Get from database
+      return new Player({
+        id,
+        position: { x: 3, y: 0.5, z: -3 },
+        health: 10,
+        maxHealth: 10,
+        speed: 3,
+        attackRange: 1,
+        attackSpeed: 1,
+        visionRange: game.VISION_DISTANCE,
+        // TODO: Ignoring this since is temporary until we have a database
+        // @ts-ignore
+        mapId: process.env.MAP_NAME,
+      });
+    }
     return player || null;
+  }
+
+  static getActive(id: number | string): Player | null {
+    return players.get<Player>(id) || null;
   }
 
   static getAllActiveIds(): Array<string> {
     return players.keys();
   }
 
-  // TODO: Id will be a string eventually
-  static set(id: number | string, player: Player) {
-    players.set(id, player);
+  async save(cacheOnly: boolean = false) {
+    players.set(this.id, this);
+    if (cacheOnly) return;
+    const key = redisConstants.PLAYERS_KEY_PREFIX + this.id;
+    await redis.set(key, JSON.stringify(this.getData()));
+  }
+
+  getData() {
+    const {
+      id,
+      position,
+      health,
+      maxHealth,
+      speed,
+      attackRange,
+      attackSpeed,
+      visionRange,
+      mapId,
+    } = this;
+    return {
+      id,
+      position,
+      health,
+      maxHealth,
+      speed,
+      attackRange,
+      attackSpeed,
+      visionRange,
+      mapId,
+    };
   }
 
   update() {

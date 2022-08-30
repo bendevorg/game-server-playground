@@ -9,7 +9,7 @@ export default class Enemy extends LivingEntity {
   nextTimeToMove = 0;
 
   // TODO: Id will be a string eventually
-  static get(id: number | string): Enemy | null {
+  static getActive(id: number | string): Enemy | null {
     let enemy: Enemy | undefined = enemies.get<Enemy>(id);
     return enemy || null;
   }
@@ -18,9 +18,8 @@ export default class Enemy extends LivingEntity {
     return enemies.keys();
   }
 
-  // TODO: Id will be a string eventually
-  static set(id: number | string, enemy: Enemy) {
-    enemies.set(id, enemy);
+  save() {
+    enemies.set(this.id, this);
   }
 
   update() {
@@ -36,7 +35,7 @@ export default class Enemy extends LivingEntity {
     // TODO: Actual AI
     const players = Player.getAllActiveIds();
     if (!this.target && players.length > 0) {
-      const player = Player.get(players[0]);
+      const player = Player.getActive(players[0]);
       if (player) {
         this.setupAttack(player);
         return;

@@ -20,9 +20,11 @@ import { Player, Enemy } from '~/models';
 export default async (req: Request, res: Response) => {
   // TODO: Check if have access to get this entity's path
   const { id } = req.params;
-  let entity: Player | Enemy | null = Player.get(id);
+  // TODO: All ids are numbers for now
+  let entity: Player | Enemy | null = await Player.get(parseInt(id));
   if (!entity) {
-    entity = Enemy.get(id);
+    // Only if the user can get this enemy's path
+    entity = Enemy.getActive(id);
   }
   if (!entity?.path || entity.path.waypoints.length === 0) {
     return res.status(404).json();

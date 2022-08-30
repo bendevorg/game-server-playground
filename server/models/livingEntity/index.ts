@@ -34,6 +34,7 @@ export default class LivingEntity {
   lastMovement: number;
   lastPathAttackUpdate: number;
   timeForNextAttack: number;
+  mapId: string;
   map?: Map;
 
   constructor({
@@ -45,6 +46,7 @@ export default class LivingEntity {
     attackRange,
     attackSpeed,
     visionRange,
+    mapId,
   }: LivingEntityConstructor) {
     this.id = id;
     this.position = position;
@@ -54,6 +56,7 @@ export default class LivingEntity {
     this.attackRange = attackRange;
     this.attackSpeed = attackSpeed;
     this.visionRange = visionRange;
+    this.mapId = mapId;
     this.target = undefined;
     const now = new Date().getTime();
     this.lastUpdate = now;

@@ -8,7 +8,7 @@ export default (input: Buffer, map: Map) => {
     let offset = network.DOUBLE_SIZE;
     const id = input.readUInt16LE(offset);
     offset += network.INT16_SIZE;
-    const player = Player.get(id);
+    const player = Player.getActive(id);
     if (!player) {
       return reject('Player does not exist');
     }
@@ -42,7 +42,7 @@ export default (input: Buffer, map: Map) => {
         break;
       case actions.ATTACK:
         const targetId = input.readUInt16LE(offset);
-        const target = Enemy.get(targetId);
+        const target = Enemy.getActive(targetId);
         if (!target) {
           return reject('Invalid target');
         }
@@ -59,7 +59,7 @@ export default (input: Buffer, map: Map) => {
         return reject('Invalid action');
     }
     player.lastUpdate = timestamp;
-    Player.set(id, player);
+    player.save(true);
     return resolve();
   });
 };
