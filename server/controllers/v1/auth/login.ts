@@ -23,8 +23,7 @@
 import { Request, Response } from 'express';
 import generateSnapshot from '~/controllers/generateSnapshot';
 import { Player, Map } from '~/models';
-import { game } from '~/constants';
-import { UnexpectedError } from '~/errors';
+import { UnexpectedError, NotFound } from '~/errors';
 
 // TODO: This is a counter that will be removed once we have a database
 // To get user's ids
@@ -37,9 +36,7 @@ export default async (req: Request, res: Response) => {
   // TODO: Use username and password
   const id = playerCounter++;
   const player = await Player.get(id);
-  if (!player) {
-    return res.status(404).json();
-  }
+  if (!player) throw new NotFound();
   player.updateNetworkData(ip, port);
   if (player.mapId) {
     const map = Map.get(player.mapId);

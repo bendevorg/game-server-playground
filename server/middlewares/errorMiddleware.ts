@@ -23,6 +23,8 @@ export default (
       return res.status(400).json({
         data: err.details[0].message,
       });
+    case errors.name.NOT_FOUND:
+      return res.status(404).json();
     case errors.name.UNEXPECTED_ERROR:
       return res.status(503).json({
         data: err.message,

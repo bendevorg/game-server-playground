@@ -16,6 +16,7 @@
 
 import { Request, Response } from 'express';
 import { Player, Enemy } from '~/models';
+import { NotFound } from '~/errors';
 
 export default async (req: Request, res: Response) => {
   // TODO: Check if have access to get this entity's path
@@ -27,7 +28,7 @@ export default async (req: Request, res: Response) => {
     entity = Enemy.getActive(id);
   }
   if (!entity?.path || entity.path.waypoints.length === 0) {
-    return res.status(404).json();
+    throw new NotFound();
   }
   const { position } = entity;
   const { startNodePosition, target, waypoints } = entity.path;

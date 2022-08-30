@@ -80,8 +80,8 @@ export default class Player extends LivingEntity {
     return players.keys();
   }
 
-  async save(cacheOnly: boolean = false) {
-    players.set(this.id, this);
+  async save(cacheOnly: boolean = false, ignoreCache: boolean = false) {
+    if (!ignoreCache) players.set(this.id, this);
     if (cacheOnly) return;
     const key = redisConstants.PLAYERS_KEY_PREFIX + this.id;
     await redis.set(key, JSON.stringify(this.getData()));
@@ -211,5 +211,10 @@ export default class Player extends LivingEntity {
       });
       socket.sendMessage(buffer, this.ip, this.port);
     });
+  }
+
+  async disconnect() {
+    await this.save(false, true);
+    players.del(this.id);
   }
 }
