@@ -18,17 +18,17 @@
   *
  */
 
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { Player } from '~/models';
 import { NotFound } from '~/errors';
 
-export default async (req: Request, res: Response) => {
+export default async (req: Request, res: Response, next: NextFunction) => {
   // TODO: We should never receive the ID like this of course
   // We should get an encrypted token that the user got when they logged in
   // And get the ID from there. This is just a placeholder for now
   const { id } = req.body;
   const player = Player.getActive(id);
-  if (!player) throw new NotFound();
+  if (!player) return next(new NotFound());
   player.disconnect();
   return res.status(200).json();
 };

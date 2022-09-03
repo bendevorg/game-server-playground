@@ -14,11 +14,11 @@
   *
  */
 
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { Player, Enemy } from '~/models';
 import { NotFound } from '~/errors';
 
-export default async (req: Request, res: Response) => {
+export default async (req: Request, res: Response, next: NextFunction) => {
   // TODO: Check if have access to get this entity's path
   const { id } = req.params;
   // TODO: All ids are numbers for now
@@ -28,7 +28,7 @@ export default async (req: Request, res: Response) => {
     entity = Enemy.getActive(id);
   }
   if (!entity?.path || entity.path.waypoints.length === 0) {
-    throw new NotFound();
+    return next(new NotFound());
   }
   const { position } = entity;
   const { startNodePosition, target, waypoints } = entity.path;

@@ -20,7 +20,7 @@
   *
  */
 
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import generateSnapshot from '~/controllers/generateSnapshot';
 import { Player, Map } from '~/models';
 import { UnexpectedError, NotFound } from '~/errors';
@@ -29,19 +29,19 @@ import { UnexpectedError, NotFound } from '~/errors';
 // To get user's ids
 let playerCounter = 0;
 
-export default async (req: Request, res: Response) => {
+export default async (req: Request, res: Response, next: NextFunction) => {
   // In the future this info will be returned by the select character or something like that
   const { ip } = req;
   const { port } = req.body;
   // TODO: Use username and password
   const id = playerCounter++;
   const player = await Player.get(id);
-  if (!player) throw new NotFound();
+  if (!player) return next(new NotFound());
   player.updateNetworkData(ip, port);
   if (player.mapId) {
     const map = Map.get(player.mapId);
     if (!map) {
-      throw new UnexpectedError('Map not found.');
+      return next(new UnexpectedError('Map not found.'));
     }
     player.setMap(map);
   }

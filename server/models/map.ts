@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { map as constants, map } from '~/constants';
-import { Node, Position } from '~/interfaces';
+import { Node, Position, GridPosition } from '~/interfaces';
 import { maps } from '~/cache';
 
 export default class Map {
@@ -61,10 +61,7 @@ export default class Map {
     }
   }
 
-  worldPositionToGridPosition(targetPosition: Position): {
-    row: number;
-    column: number;
-  } {
+  worldPositionToGridPosition(targetPosition: Position): GridPosition {
     const distanceFromStartInX = targetPosition.x - this.position.x;
     const distanceFromStartInZ = targetPosition.z - this.position.z;
     const row = Math.floor(distanceFromStartInZ / this.squareSize);
@@ -81,21 +78,13 @@ export default class Map {
     return { row, column };
   }
 
+  gridPositionToNode(gridPosition: GridPosition): Node {
+    return this.grid[gridPosition.row][gridPosition.column];
+  }
+
   worldPositionToNode(targetPosition: Position): Node {
-    const distanceFromStartInX = targetPosition.x - this.position.x;
-    const distanceFromStartInZ = targetPosition.z - this.position.z;
-    const row = Math.floor(distanceFromStartInZ / this.squareSize);
-    const column = Math.floor(distanceFromStartInX / this.squareSize);
-    if (
-      this.grid == null ||
-      row < 0 ||
-      row >= this.grid.length ||
-      column < 0 ||
-      column >= this.grid[row].length
-    ) {
-      throw 'World position is not inside the grid';
-    }
-    return this.grid[row][column];
+    const gridPosition = this.worldPositionToGridPosition(targetPosition);
+    return this.gridPositionToNode(gridPosition);
   }
 
   cloneGrid(): Array<Array<Node>> {
@@ -120,7 +109,7 @@ export default class Map {
         const neighbors: Array<Node> = [];
         this.grid[i][j].neighbors.forEach((neighbor) => {
           neighbors.push(
-            clone[neighbor.gridPosition.x][neighbor.gridPosition.y],
+            clone[neighbor.gridPosition.row][neighbor.gridPosition.column],
           );
         });
 
@@ -138,15 +127,15 @@ export default class Map {
     let tentatives = 0;
     while (tentatives < 5) {
       const cellsRange = Math.ceil(range / this.squareSize);
-      const minRow = Math.max(0, center.gridPosition.y - cellsRange);
+      const minRow = Math.max(0, center.gridPosition.row - cellsRange);
       const maxRow = Math.min(
         this.grid.length - 1,
-        center.gridPosition.y + cellsRange,
+        center.gridPosition.row + cellsRange,
       );
-      const minColumn = Math.max(0, center.gridPosition.x - cellsRange);
+      const minColumn = Math.max(0, center.gridPosition.column - cellsRange);
       const maxColumn = Math.min(
         this.grid[0].length - 1,
-        center.gridPosition.x + cellsRange,
+        center.gridPosition.column + cellsRange,
       );
       const row = Math.floor(Math.random() * (maxRow - minRow + 1) + minRow);
       const column = Math.floor(

@@ -8,3 +8,4 @@ export { default as TwoDPosition } from './twoDPosition';
 export { default as Path } from './path';
 export { default as Node } from './node';
 export { IModuleDictionary, IStringDictionary } from './common';
+export { default as GridPosition } from './gridPosition';

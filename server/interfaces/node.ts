@@ -1,4 +1,4 @@
-import { Position, TwoDPosition } from '.';
+import { Position, GridPosition } from '.';
 
 export default interface Node {
   // TODO: Can we use our constants here?
@@ -11,6 +11,6 @@ export default interface Node {
   costSoFar: number;
   diagonalCost: number;
   estimatedCostToTarget: number;
-  gridPosition: TwoDPosition;
+  gridPosition: GridPosition;
   position: Position;
 }
