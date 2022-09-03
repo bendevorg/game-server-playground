@@ -28881,6 +28881,26 @@
 			}
 		]
 	],
+	"obstacles": [
+		{
+			"topLeft": {
+				"row": 22,
+				"column": 26
+			},
+			"topRight": {
+				"row": 22,
+				"column": 35
+			},
+			"bottomLeft": {
+				"row": 15,
+				"column": 26
+			},
+			"bottomRight": {
+				"row": 15,
+				"column": 35
+			}
+		}
+	],
 	"position": {
 		"x": -5,
 		"y": 0,
@@ -28888,9 +28908,9 @@
 	},
 	"squareSize": 0.25,
 	"enemies": [
-    {
-      "id": 0,
-      "amount": 1
-    }
-  ]
+		{
+			"id": 0,
+			"amount": 1
+		}
+	]
 }

@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { map as constants, map } from '~/constants';
-import { Node, Position, GridPosition } from '~/interfaces';
+import { Node, Position, GridPosition, Obstacle } from '~/interfaces';
 import { maps } from '~/cache';
 
 export default class Map {
   id: string;
   grid: Array<Array<Node>>;
+  obstacles: Array<Obstacle>;
   position: Position;
   squareSize: number;
   // TODO: Update this once we have a proper enemy data format in the map file
@@ -20,6 +21,7 @@ export default class Map {
     );
     this.id = mapName;
     this.grid = mapFile.grid;
+    this.obstacles = mapFile.obstacles;
     this.position = mapFile.position;
     this.squareSize = mapFile.squareSize;
     this.enemies = mapFile.enemies;
