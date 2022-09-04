@@ -18,22 +18,38 @@ export default (input: Buffer, map: Map) => {
       case actions.PING:
         break;
       case actions.MOVEMENT:
-        const x = input.readInt16LE(offset);
+        const targetX = input.readInt16LE(offset);
         offset += network.INT16_SIZE;
-        const z = input.readInt16LE(offset);
+        const targetZ = input.readInt16LE(offset);
+        offset += network.INT16_SIZE;
+        const currentX = input.readInt16LE(offset);
+        offset += network.INT16_SIZE;
+        const currentZ = input.readInt16LE(offset);
         // The position is a short where the last 2 numbers are decimals
         // Multiplying by 1.0 so it turns into a float
-        const position: Position = {
-          x: (x * 1.0) / 100,
+        const targetPosition: Position = {
+          x: (targetX * 1.0) / 100,
           y: 0,
-          z: (z * 1.0) / 100,
+          z: (targetZ * 1.0) / 100,
         };
-        // We should apply the movement between last and this tick before changing paths
-        await player.move(timestamp);
+        const currentPosition: Position = {
+          x: (currentX * 1.0) / 100,
+          y: 0,
+          z: (currentZ * 1.0) / 100,
+        };
+        const accepted = await player.attemptToSyncPosition(
+          currentPosition,
+          timestamp,
+        );
+        // If the sync was not accepted we move the player here instead to apply remaining movement.
+        if (!accepted) {
+          // We should apply the movement between last and this tick before changing paths
+          await player.move(timestamp);
+        }
 
         // We don't wait for this but living entity internally uses locks to
         // guarantee that we won't have collisions when accessing things
-        player.calculatePath(position);
+        player.calculatePath(targetPosition);
         // This last movement is assigned here so in the next server tick
         // After the path is calculated we will move taking into account the time
         // Between this timestamp and the future tick timestamp

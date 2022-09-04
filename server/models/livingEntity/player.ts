@@ -1,6 +1,17 @@
 import { LivingEntity } from '../';
-import { PublicLivingEntity, Snapshot, PlayerConstructor } from '~/interfaces';
-import { game, network, locks, redis as redisConstants } from '~/constants';
+import {
+  PublicLivingEntity,
+  Snapshot,
+  PlayerConstructor,
+  Position,
+} from '~/interfaces';
+import {
+  game,
+  network,
+  locks,
+  redis as redisConstants,
+  engine,
+} from '~/constants';
 import socket from '~/core/socket';
 import lock from '~/utils/lock';
 import redis from '~/utils/redis';
@@ -119,6 +130,79 @@ export default class Player extends LivingEntity {
   updateNetworkData(ip: string, port: number) {
     this.ip = ip;
     this.port = port;
+  }
+
+  // Some times the client will sent some information about the current state
+  // In order to try to be as in sync as possible this function will verify if that information is valid
+  // And if so will accept it.
+  // For this we will get the sent position and check if this is a position that we will be in the near future.
+  // TODO: We should limit the amount of times that a player can use this in a amount of time
+  // So they cannot exploit this somehow to make the character move faster than it should.
+  async attemptToSyncPosition(
+    position: Position,
+    timestamp: number,
+  ): Promise<boolean> {
+    return new Promise<boolean>(async (resolve, reject) => {
+      let synced = false;
+      await lock.acquire(locks.ENTITY_PATH + this.id, async (done) => {
+        await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
+          if (!this.path || this.path.waypoints.length === 0) {
+            done();
+            // The player is not moving, so there isn't any sync to do.
+            return resolve(false);
+          }
+          // We calculate the newest state of the server movement for the player
+          // And then we check how distance it is from the position that was sent
+          // If it is close enough we accept it.
+          const distanceX =
+            this.path.waypoints[this.path.waypoints.length - 1].x -
+            this.position.x;
+          const distanceZ =
+            this.path.waypoints[this.path.waypoints.length - 1].z -
+            this.position.z;
+          const magnitude = Math.sqrt(
+            distanceX * distanceX + distanceZ * distanceZ,
+          );
+          const directionX = distanceX / magnitude;
+          const directionZ = distanceZ / magnitude;
+          const timeSinceLastUpdate = (timestamp - this.lastMovement) / 1000;
+          const distanceToMoveInX =
+            directionX * this.speed * timeSinceLastUpdate;
+          const distanceToMoveInZ =
+            directionZ * this.speed * timeSinceLastUpdate;
+          const futurePosition = {
+            ...this.position,
+            x: this.position.x + distanceToMoveInX,
+            z: this.position.z + distanceToMoveInZ,
+          };
+          const futureDistanceX = futurePosition.x - position.x;
+          const futureDistanceZ = futurePosition.z - position.z;
+          const futureMagnitude = Math.sqrt(
+            futureDistanceX * futureDistanceX +
+              futureDistanceZ * futureDistanceZ,
+          );
+          // MAX_DISTANCE_TO_ACCEPT_SYNC needs to be small as possible
+          // because in theory player's could use this sync to make it's player move
+          // a little in the future. Right now this value is 0.02 which apparently is enough
+          // to help with the path desync issue and is a value that is small enough that in practice
+          // You can't use to cheat. We should increase this value if the desync keeps happening
+          // Or decrease this value or remove this function if players uses this to cheat.
+          if (futureMagnitude > engine.MAX_DISTANCE_TO_ACCEPT_SYNC) {
+            return done();
+          }
+          synced = true;
+          this.position = {
+            ...this.position,
+            x: position.x,
+            z: position.z,
+          };
+          this.setLastMovement(timestamp);
+          return done();
+        });
+        return done();
+      });
+      return resolve(synced);
+    });
   }
 
   sendSnapshot(snapshot: Snapshot) {
