@@ -8,5 +8,6 @@ export { default as TwoDPosition } from './twoDPosition';
 export { default as Path } from './path';
 export { default as Node } from './node';
 export { default as GridPosition } from './gridPosition';
+export { default as GridLine } from './gridLine';
 export { default as Obstacle } from './obstacle';
 export { IModuleDictionary, IStringDictionary } from './common';

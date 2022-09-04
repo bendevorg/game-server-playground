@@ -5,7 +5,7 @@ import {
   Node,
   PublicLivingEntity,
   LivingEntityConstructor,
-  GridPosition,
+  GridLine,
 } from '~/interfaces';
 import { map as constants, game, locks } from '~/constants';
 import lock from '~/utils/lock';
@@ -149,7 +149,7 @@ export default class LivingEntity {
       ) {
         return resolve();
       }
-      const nodes: Array<Node> = [];
+      let nodes: Array<Node> = [];
 
       //  Calculating path
       //  This list holds the Nodes that are candidates to be expanded
@@ -159,8 +159,9 @@ export default class LivingEntity {
       const exploredListHash: { [key: string]: boolean } = {};
       //  Start with only the starting point
       candidatesList.push(start);
-      candidatesListHash[`${start.gridPosition.row}-${start.gridPosition.column}`] =
-        true;
+      candidatesListHash[
+        `${start.gridPosition.row}-${start.gridPosition.column}`
+      ] = true;
       while (candidatesList.length > 0) {
         let lowestCostIndex = 0;
         //  Get the next cheapest node
@@ -266,7 +267,7 @@ export default class LivingEntity {
         }
       }
       // We change the nodes array that we pass as a parameter which is a reference
-      // this.simplifyPath(nodes);
+      nodes = this.simplifyPath(nodes);
       const waypoints = this.calculateWaypoints(nodes);
       const path: Path = {
         startNodePosition: start.position,
@@ -281,69 +282,47 @@ export default class LivingEntity {
     });
   }
 
-  simplifyPath(nodes: Array<Node>) {
-    if (nodes.length == 0 || !this.map) return;
-    // The first node is the target and the last node is the start, so we have to go backwards
-    let currentNodeIndex = nodes.length - 1;
-    while (currentNodeIndex > 1) {
-      // We check if there's nothing between this node and the node after the next one
-      const direction: GridPosition = {
-        row:
-          nodes[currentNodeIndex - 2].gridPosition.row -
-          nodes[currentNodeIndex].gridPosition.row,
-        column:
-          nodes[currentNodeIndex - 2].gridPosition.column -
-          nodes[currentNodeIndex].gridPosition.column,
+  simplifyPath(nodes: Array<Node>): Array<Node> {
+    // If there is 2 or less points there's no simplification to be done.
+    if (nodes.length <= 2 || !this.map) return nodes;
+    // The strategy to simplify the path is the following:
+    // We will always have 2 nodes, one is our start node and the other one is our target node
+    // We will always start with the start position being the first grid position, which is where the entity starts (this.nodes[this.nodes.Count - 1])
+    // And the target being the end position, where the entity wanna go (this.nodes[0])
+    // We will do a raycast (a custom one, not the one built-in Unity) between those two nodes
+    // If there is any obstacle between these two nodes then we will move
+    // Our start node into the target node direction until we can find a raycast that succeeds
+    // Once that happens we will start the cycle again, with the starget being the start node
+    // And the target node now being the last node that we were able to find a raycast
+    const simplifiedNodes: Node[] = [];
+    // Remember that the path is in reverse (last point is first)
+    let startIndex = nodes.length - 1;
+    let targetIndex = 0;
+    // We can start by adding the last point
+    simplifiedNodes.push(nodes[targetIndex]);
+    // If the start reaches the end it means that there isn't any more simplifications to be done.
+    while (startIndex > 0) {
+      // If the line intersects with an object we try the next one.
+      const line: GridLine = {
+        pointA: nodes[startIndex].gridPosition,
+        pointB: nodes[targetIndex].gridPosition,
       };
-      // Wraps direction to be between (-1, -1), (1, 1)
-      const normalizedDirection: GridPosition = {
-        row: Math.min(-1, Math.max(1, direction.row)),
-        column: Math.min(-1, Math.max(1, direction.column)),
-      };
-      const isDiagonal =
-        normalizedDirection.row != 0 && normalizedDirection.column != 0;
-      const gridsToCheck: Array<GridPosition> = [
-        {
-          row: nodes[currentNodeIndex - 2].gridPosition.row - normalizedDirection.row,
-          column: nodes[currentNodeIndex - 2].gridPosition.column - normalizedDirection.column,
-        },
-      ];
-      // If it is diagonal we will check one additional cell
-      // And that is the one on the left/right side if we are in a diagonal to the sides
-      // Or on the front/back if we are in a diagonal to the front/back.
-      // We check which kind of diagonal we are doing using the original direction
-      // There we can check which value is greater than one
-      if (isDiagonal) {
-        if (Math.abs(direction.row) > 1) {
-          gridsToCheck.push({
-            row: nodes[currentNodeIndex - 2].gridPosition.row - direction.row,
-            column: nodes[currentNodeIndex - 2].gridPosition.column,
-          });
-        } else {
-          gridsToCheck.push({
-            row: nodes[currentNodeIndex - 2].gridPosition.row,
-            column: nodes[currentNodeIndex - 2].gridPosition.column - direction.column,
-          });
-        }
-      }
-      let foundObstacle = false;
-      for (let i = 0; i < gridsToCheck.length; i++) {
-        const nodeToCheck = this.map.gridPositionToNode(gridsToCheck[i]);
-        if (nodeToCheck.type != constants.OBSTACLE_TILE) {
+      if (this.map.isLineCrossingAnObject(line)) {
+        // If the next start will become the target it means that we have tried every possibility
+        // If so we should add this node to the path (which the code out of the if does).
+        if (startIndex - 1 != targetIndex) {
+          startIndex--;
           continue;
         }
-        foundObstacle = true;
-        break;
       }
-      // Remove the cell that is not needed
-      if (!foundObstacle) {
-        nodes.splice(currentNodeIndex - 1, 1);
-      }
-      // If we have removed the cell we still wants to go back one index
-      // now that the list is smaller. If we haven't removed then we will check for the next
-      // cell to see if we can cut something.
-      currentNodeIndex--;
+      // Add this point to the path list
+      simplifiedNodes.push(nodes[startIndex]);
+      // Found a direct path to the start, we can stop optimizing
+      if (startIndex == nodes.length - 1) break;
+      targetIndex = startIndex;
+      startIndex = nodes.length - 1;
     }
+    return simplifiedNodes;
   }
 
   calculateWaypoints(nodes: Array<Node>) {

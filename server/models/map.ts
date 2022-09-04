@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import doIntersect from '~/utils/doIntersect';
 import { map as constants, map } from '~/constants';
-import { Node, Position, GridPosition, Obstacle } from '~/interfaces';
+import { Node, Position, GridPosition, GridLine, Obstacle } from '~/interfaces';
 import { maps } from '~/cache';
 
 export default class Map {
@@ -87,6 +88,43 @@ export default class Map {
   worldPositionToNode(targetPosition: Position): Node {
     const gridPosition = this.worldPositionToGridPosition(targetPosition);
     return this.gridPositionToNode(gridPosition);
+  }
+
+  // This will be called a lot, so let's try to be as efficient as possible
+  // Before we do any fancy math to check if the line actually cross the bounds
+  // We can check if it definitely doesn't in a very cheap way. For that we can
+  // check if both points are above, below, to the left or to the right of the obstacle.
+  // If so we can confidently say that it doesn't intersect.
+  isLineCrossingAnObject(line: GridLine) {
+    // TODO: There might be a mathematical way to check this
+    for (let i = 0; i < this.obstacles.length; i++) {
+      const bothPointsAbove =
+        line.pointA.row > this.obstacles[i].upmost &&
+        line.pointB.row > this.obstacles[i].upmost;
+      if (bothPointsAbove) continue;
+      const bothPointsBelow =
+        line.pointA.row < this.obstacles[i].bottommost &&
+        line.pointB.row < this.obstacles[i].bottommost;
+      if (bothPointsBelow) continue;
+      const bothPointsMoreToTheLeft =
+        line.pointA.column < this.obstacles[i].leftmost &&
+        line.pointB.column < this.obstacles[i].leftmost;
+      if (bothPointsMoreToTheLeft) continue;
+      const bothPointsMoreToTheRight =
+        line.pointA.column > this.obstacles[i].rightmost &&
+        line.pointB.column > this.obstacles[i].rightmost;
+      if (bothPointsMoreToTheRight) continue;
+      // More expensive check
+      // If none of the above worked we will need to check if any of the 4 lines in the rectangle
+      // Intersects with the point. To understand better how this is done you can check the explanation here
+      // https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
+      // TODO: There might be a clever way to skip some of these
+      if (doIntersect(line, this.obstacles[i].topLine)) return true;
+      if (doIntersect(line, this.obstacles[i].rightLine)) return true;
+      if (doIntersect(line, this.obstacles[i].bottomLine)) return true;
+      if (doIntersect(line, this.obstacles[i].leftLine)) return true;
+    }
+    return false;
   }
 
   cloneGrid(): Array<Array<Node>> {

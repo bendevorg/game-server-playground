@@ -1,6 +1,16 @@
+import { GridPosition, GridLine } from '.';
+
 export default interface Obstacle {
-  topLeft: number;
-  topRight: number;
-  bottomLeft: number;
-  bottomRight: number;
+  topLeft: GridPosition;
+  topRight: GridPosition;
+  bottomLeft: GridPosition;
+  bottomRight: GridPosition;
+  topLine: GridLine;
+  rightLine: GridLine;
+  bottomLine: GridLine;
+  leftLine: GridLine;
+  upmost: number;
+  bottommost: number;
+  leftmost: number;
+  rightmost: number;
 }
