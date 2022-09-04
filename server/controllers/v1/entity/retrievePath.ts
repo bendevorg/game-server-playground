@@ -31,11 +31,11 @@ export default async (req: Request, res: Response, next: NextFunction) => {
     return next(new NotFound());
   }
   const { position } = entity;
+  const timestamp = new Date().getTime();
   if (!entity.path || entity.path.waypoints.length === 0) {
-    return res.status(200).json({ position });
+    return res.status(200).json({ position, waypoints: [], timestamp });
   }
   const { startNodePosition, target, waypoints } = entity.path;
-  const timestamp = new Date().getTime();
   return res
     .status(200)
     .json({ position, startNodePosition, target, waypoints, timestamp });
