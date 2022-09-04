@@ -125,6 +125,17 @@ export default class LivingEntity {
     this.state = State.STAND_BY;
   }
 
+  // If there is no objects between the two points
+  // then a straight path is available
+  isStraightPathAvailable(start: Node, end: Node) {
+    if (!this.map) return false;
+    const line: GridLine = {
+      pointA: start.gridPosition,
+      pointB: end.gridPosition,
+    };
+    return !this.map.isLineCrossingAnObject(line);
+  }
+
   calculatePath(target: Position) {
     return new Promise<void>(async (resolve, reject) => {
       if (!this.map) {
@@ -152,118 +163,127 @@ export default class LivingEntity {
       let nodes: Array<Node> = [];
 
       //  Calculating path
-      //  This list holds the Nodes that are candidates to be expanded
-      const candidatesList: Array<Node> = [];
-      const candidatesListHash: { [key: string]: boolean } = {};
-      //  Holds the Nodes that we expanded already so we don't need to expand them again
-      const exploredListHash: { [key: string]: boolean } = {};
-      //  Start with only the starting point
-      candidatesList.push(start);
-      candidatesListHash[
-        `${start.gridPosition.row}-${start.gridPosition.column}`
-      ] = true;
-      while (candidatesList.length > 0) {
-        let lowestCostIndex = 0;
-        //  Get the next cheapest node
-        for (let i = 0; i < candidatesList.length; i++) {
-          const candidateCost =
-            candidatesList[i].costSoFar +
-            candidatesList[i].estimatedCostToTarget;
-          const currentCost =
-            candidatesList[lowestCostIndex].costSoFar +
-            candidatesList[lowestCostIndex].estimatedCostToTarget;
-          if (candidateCost < currentCost) {
-            lowestCostIndex = i;
-          }
-        }
-        let currentNode: Node = candidatesList[lowestCostIndex];
-        if (currentNode === end) {
-          // Last waypoint's position should be the target
-          currentNode.position = {
-            x: target.x,
-            y: currentNode.position.y,
-            z: target.z,
-          };
-          // Found it, let's create the path
-          while (currentNode.parent) {
-            nodes.push(currentNode);
-            currentNode = currentNode.parent;
-          }
-          break;
-        }
-        //  We are going to expand this node, so let's remove it from the candidates list
-        //  And add it to the explored list
-        candidatesList.splice(lowestCostIndex, 1);
-        delete candidatesListHash[
-          `${currentNode.gridPosition.row}-${currentNode.gridPosition.column}`
-        ];
-        exploredListHash[
-          `${currentNode.gridPosition.row}-${currentNode.gridPosition.column}`
+      // If a straight path is valid we don't need to run a*
+      // The path will be those 2 nodes.
+      if (this.isStraightPathAvailable(start, end)) {
+        nodes.push(end);
+        nodes.push(start);
+      } else {
+        // A*
+        //  This list holds the Nodes that are candidates to be expanded
+        const candidatesList: Array<Node> = [];
+        const candidatesListHash: { [key: string]: boolean } = {};
+        //  Holds the Nodes that we expanded already so we don't need to expand them again
+        const exploredListHash: { [key: string]: boolean } = {};
+        //  Start with only the starting point
+        candidatesList.push(start);
+        candidatesListHash[
+          `${start.gridPosition.row}-${start.gridPosition.column}`
         ] = true;
-
-        //  Let's look for each neighbour of this expanded node
-        for (let i = 0; i < currentNode.neighbors.length; i++) {
-          //  If this neighbour was explored already we skip it
-          if (
-            `${currentNode.neighbors[i].gridPosition.row}-${currentNode.neighbors[i].gridPosition.column}` in
-            exploredListHash
-          ) {
-            continue;
-          }
-          //  If this neighbour is in the candidate list let's see if we can update the total cost for it
-          //  If we can we also set the current node as it's parent so we can know the path later
-          const isDiagonal =
-            currentNode.gridPosition.row -
-              currentNode.neighbors[i].gridPosition.row !==
-              0 &&
-            currentNode.gridPosition.column -
-              currentNode.neighbors[i].gridPosition.column !==
-              0;
-          if (
-            `${currentNode.neighbors[i].gridPosition.row}-${currentNode.neighbors[i].gridPosition.column}` in
-            candidatesListHash
-          ) {
-            if (
-              currentNode.costSoFar + currentNode.neighbors[i].cost <
-              currentNode.neighbors[i].costSoFar
-            ) {
-              currentNode.neighbors[i].costSoFar =
-                currentNode.costSoFar +
-                currentNode.neighbors[i].cost +
-                (isDiagonal
-                  ? currentNode.diagonalCost +
-                    currentNode.neighbors[i].diagonalCost
-                  : 0);
-              currentNode.neighbors[i].parent = currentNode;
+        while (candidatesList.length > 0) {
+          let lowestCostIndex = 0;
+          //  Get the next cheapest node
+          for (let i = 0; i < candidatesList.length; i++) {
+            const candidateCost =
+              candidatesList[i].costSoFar +
+              candidatesList[i].estimatedCostToTarget;
+            const currentCost =
+              candidatesList[lowestCostIndex].costSoFar +
+              candidatesList[lowestCostIndex].estimatedCostToTarget;
+            if (candidateCost < currentCost) {
+              lowestCostIndex = i;
             }
-            continue;
           }
-          //  If this neighbour was not explored and was not ready to be explored
-          //  It means that we should add this to the candidates list so we can explore
-          //  It later
-          currentNode.neighbors[i].costSoFar =
-            currentNode.costSoFar +
-            currentNode.neighbors[i].cost +
-            (isDiagonal
-              ? currentNode.diagonalCost + currentNode.neighbors[i].diagonalCost
-              : 0);
-          currentNode.neighbors[i].estimatedCostToTarget = Math.ceil(
-            Math.sqrt(
-              Math.pow(
-                start.position.x - currentNode.neighbors[i].position.x,
-                2,
-              ) +
-                Math.pow(
-                  start.position.y - currentNode.neighbors[i].position.y,
-                  2,
-                ),
-            ),
-          );
-          currentNode.neighbors[i].parent = currentNode;
-          candidatesList.push(currentNode.neighbors[i]);
-          candidatesListHash[
-            `${currentNode.neighbors[i].gridPosition.row}-${currentNode.neighbors[i].gridPosition.column}`
+          let currentNode: Node = candidatesList[lowestCostIndex];
+          if (currentNode === end) {
+            // Last waypoint's position should be the target
+            currentNode.position = {
+              x: target.x,
+              y: currentNode.position.y,
+              z: target.z,
+            };
+            // Found it, let's create the path
+            while (currentNode.parent) {
+              nodes.push(currentNode);
+              currentNode = currentNode.parent;
+            }
+            break;
+          }
+          //  We are going to expand this node, so let's remove it from the candidates list
+          //  And add it to the explored list
+          candidatesList.splice(lowestCostIndex, 1);
+          delete candidatesListHash[
+            `${currentNode.gridPosition.row}-${currentNode.gridPosition.column}`
+          ];
+          exploredListHash[
+            `${currentNode.gridPosition.row}-${currentNode.gridPosition.column}`
           ] = true;
+
+          //  Let's look for each neighbour of this expanded node
+          for (let i = 0; i < currentNode.neighbors.length; i++) {
+            //  If this neighbour was explored already we skip it
+            if (
+              `${currentNode.neighbors[i].gridPosition.row}-${currentNode.neighbors[i].gridPosition.column}` in
+              exploredListHash
+            ) {
+              continue;
+            }
+            //  If this neighbour is in the candidate list let's see if we can update the total cost for it
+            //  If we can we also set the current node as it's parent so we can know the path later
+            const isDiagonal =
+              currentNode.gridPosition.row -
+                currentNode.neighbors[i].gridPosition.row !==
+                0 &&
+              currentNode.gridPosition.column -
+                currentNode.neighbors[i].gridPosition.column !==
+                0;
+            if (
+              `${currentNode.neighbors[i].gridPosition.row}-${currentNode.neighbors[i].gridPosition.column}` in
+              candidatesListHash
+            ) {
+              if (
+                currentNode.costSoFar + currentNode.neighbors[i].cost <
+                currentNode.neighbors[i].costSoFar
+              ) {
+                currentNode.neighbors[i].costSoFar =
+                  currentNode.costSoFar +
+                  currentNode.neighbors[i].cost +
+                  (isDiagonal
+                    ? currentNode.diagonalCost +
+                      currentNode.neighbors[i].diagonalCost
+                    : 0);
+                currentNode.neighbors[i].parent = currentNode;
+              }
+              continue;
+            }
+            //  If this neighbour was not explored and was not ready to be explored
+            //  It means that we should add this to the candidates list so we can explore
+            //  It later
+            currentNode.neighbors[i].costSoFar =
+              currentNode.costSoFar +
+              currentNode.neighbors[i].cost +
+              (isDiagonal
+                ? currentNode.diagonalCost +
+                  currentNode.neighbors[i].diagonalCost
+                : 0);
+            currentNode.neighbors[i].estimatedCostToTarget = Math.ceil(
+              Math.sqrt(
+                Math.pow(
+                  start.position.x - currentNode.neighbors[i].position.x,
+                  2,
+                ) +
+                  Math.pow(
+                    start.position.y - currentNode.neighbors[i].position.y,
+                    2,
+                  ),
+              ),
+            );
+            currentNode.neighbors[i].parent = currentNode;
+            candidatesList.push(currentNode.neighbors[i]);
+            candidatesListHash[
+              `${currentNode.neighbors[i].gridPosition.row}-${currentNode.neighbors[i].gridPosition.column}`
+            ] = true;
+          }
         }
       }
       // We change the nodes array that we pass as a parameter which is a reference
