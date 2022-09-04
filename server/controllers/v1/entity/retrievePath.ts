@@ -27,10 +27,13 @@ export default async (req: Request, res: Response, next: NextFunction) => {
     // Only if the user can get this enemy's path
     entity = Enemy.getActive(id);
   }
-  if (!entity?.path || entity.path.waypoints.length === 0) {
+  if (!entity) {
     return next(new NotFound());
   }
   const { position } = entity;
+  if (!entity.path || entity.path.waypoints.length === 0) {
+    return res.status(200).json({ position });
+  }
   const { startNodePosition, target, waypoints } = entity.path;
   const timestamp = new Date().getTime();
   return res
