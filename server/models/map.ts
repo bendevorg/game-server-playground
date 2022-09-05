@@ -90,6 +90,20 @@ export default class Map {
     return this.gridPositionToNode(gridPosition);
   }
 
+  // This will return float rows and column, should be used
+  // When trying to check the closest grid position that is not its current position.
+  // This might return an out of bounds grid position
+  worldPositionToRawGridPosition(targetPosition: Position): GridPosition {
+    const distanceFromStartInX = targetPosition.x - this.position.x;
+    const distanceFromStartInZ = targetPosition.z - this.position.z;
+    const row = distanceFromStartInZ / this.squareSize;
+    const column = distanceFromStartInX / this.squareSize;
+    return {
+      row,
+      column,
+    };
+  }
+
   // This will be called a lot, so let's try to be as efficient as possible
   // Before we do any fancy math to check if the line actually cross the bounds
   // We can check if it definitely doesn't in a very cheap way. For that we can

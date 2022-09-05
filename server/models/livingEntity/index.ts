@@ -6,6 +6,7 @@ import {
   PublicLivingEntity,
   LivingEntityConstructor,
   GridLine,
+  GridPosition,
 } from '~/interfaces';
 import { map as constants, game, locks } from '~/constants';
 import lock from '~/utils/lock';
@@ -136,6 +137,116 @@ export default class LivingEntity {
     return !this.map.isLineCrossingAnObject(line);
   }
 
+  async attemptToFindNewStart(start: Node, end: Node, grid: Node[][]) {
+    if (!this.map) return start;
+    // We first try to check if the next cell in the target direction is free
+    // Since that's the one that would reproduce the smoothest path
+    let directionRow = end.gridPosition.row - start.gridPosition.row;
+    let directionColumn = end.gridPosition.column - start.gridPosition.column;
+    directionRow = Math.min(Math.max(directionRow, -1), 1);
+    directionColumn = Math.min(Math.max(directionColumn, -1), 1);
+    const candidateRow = start.gridPosition.row + directionRow;
+    const candidateColumn = start.gridPosition.column + directionColumn;
+    const rowAndColumnWithinBounds =
+      candidateRow >= 0 &&
+      candidateRow < grid.length &&
+      candidateColumn >= 0 &&
+      candidateColumn < grid[candidateRow].length;
+    if (
+      rowAndColumnWithinBounds &&
+      grid[candidateRow][candidateColumn].type == constants.GROUND_TILE
+    ) {
+      return grid[candidateRow][candidateColumn];
+    }
+    // If that one doesn't work we try to be the closest in at least one of the axis
+    if (
+      grid[candidateRow][start.gridPosition.column].type ==
+      constants.GROUND_TILE
+    ) {
+      return grid[candidateRow][candidateColumn];
+    }
+    if (
+      grid[start.gridPosition.row][candidateColumn].type ==
+      constants.GROUND_TILE
+    ) {
+      return grid[candidateRow][candidateColumn];
+    }
+
+    // If that still doesn't work we get the next closes row and column to the player
+    // And try to mix that with the closest row and column of the target
+    let rawGridPosition: GridPosition | undefined;
+    await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
+      if (!this.map) return done();
+      rawGridPosition = this.map.worldPositionToRawGridPosition(this.position);
+      done();
+    });
+    if (!rawGridPosition) return start;
+    let rawGridRowDecimals =
+      rawGridPosition.row - Math.floor(rawGridPosition.row);
+    let rawGridColumnDecimals =
+      rawGridPosition.column - Math.floor(rawGridPosition.column);
+    let closestRow =
+      start.gridPosition.row + (rawGridRowDecimals >= 0.5 ? 1 : -1);
+    let validClosestRow = closestRow > 0 && closestRow < grid.length;
+    if (
+      validClosestRow &&
+      grid[closestRow][candidateColumn].type == constants.GROUND_TILE
+    ) {
+      return grid[closestRow][candidateColumn];
+    }
+    let closestColumn =
+      start.gridPosition.column + (rawGridColumnDecimals >= 0.5 ? 1 : -1);
+    let validClosestColumn =
+      closestColumn > 0 && closestColumn < grid[candidateRow].length;
+    if (
+      closestColumn > 0 &&
+      closestColumn < grid[candidateRow].length &&
+      grid[candidateRow][closestColumn].type == constants.GROUND_TILE
+    ) {
+      return grid[candidateRow][closestColumn];
+    }
+    validClosestColumn =
+      closestColumn > 0 && closestColumn < grid[closestRow].length;
+    if (
+      validClosestRow &&
+      validClosestRow &&
+      grid[closestRow][closestColumn].type == constants.GROUND_TILE
+    ) {
+      return grid[closestRow][closestColumn];
+    }
+
+    // Farthest points
+    closestRow = start.gridPosition.row + (rawGridRowDecimals >= 0.5 ? -1 : 1);
+    validClosestRow = closestRow > 0 && closestRow < grid.length;
+    if (
+      validClosestRow &&
+      grid[closestRow][candidateColumn].type == constants.GROUND_TILE
+    ) {
+      return grid[closestRow][candidateColumn];
+    }
+    closestColumn =
+      start.gridPosition.column + (rawGridColumnDecimals >= 0.5 ? -1 : 1);
+    validClosestColumn =
+      closestColumn > 0 && closestColumn < grid[candidateRow].length;
+    if (
+      closestColumn > 0 &&
+      closestColumn < grid[candidateRow].length &&
+      grid[candidateRow][closestColumn].type == constants.GROUND_TILE
+    ) {
+      return grid[candidateRow][closestColumn];
+    }
+    validClosestColumn =
+      closestColumn > 0 && closestColumn < grid[closestRow].length;
+    if (
+      validClosestRow &&
+      validClosestRow &&
+      grid[closestRow][closestColumn].type == constants.GROUND_TILE
+    ) {
+      return grid[closestRow][closestColumn];
+    }
+    return start;
+  }
+
   calculatePath(target: Position) {
     return new Promise<void>(async (resolve, reject) => {
       if (!this.map) {
@@ -152,13 +263,18 @@ export default class LivingEntity {
       });
       const targetGridPosition = this.map.worldPositionToGridPosition(target);
       const grid = this.map.cloneGrid();
-      const start = grid[startGridPosition.row][startGridPosition.column];
+      let start = grid[startGridPosition.row][startGridPosition.column];
       const end = grid[targetGridPosition.row][targetGridPosition.column];
-      if (
-        start.type !== constants.GROUND_TILE ||
-        end.type !== constants.GROUND_TILE
-      ) {
+      if (end.type !== constants.GROUND_TILE) {
         return resolve();
+      }
+      if (start.type !== constants.GROUND_TILE) {
+        // There are scenarios where a path can make the user walk slightly over an obstacle
+        // In those cases we should try to start our path on the closest non obstacle point.
+        start = await this.attemptToFindNewStart(start, end, grid);
+        if (start.type !== constants.GROUND_TILE) {
+          return resolve();
+        }
       }
       let nodes: Array<Node> = [];
 
