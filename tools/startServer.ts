@@ -12,12 +12,14 @@ import onMessage from '~/core/onMessage';
 import gameLoop from '~/core/gameLoop';
 import { game } from '~/constants';
 import { maps } from '~/cache';
+// Importing so the database authenticates
+import database from '~/models';
 
 const { PORT } = process.env;
 const app = express();
 app.use('/', router);
 
-// TODO: Each server will be responsible for one or more maps
+// TODO: Eventually each server will be responsible for one or more maps
 // TODO: This should probably be done somewhere else
 if (!game.MAP_NAME) {
   console.error('Please set a map name');

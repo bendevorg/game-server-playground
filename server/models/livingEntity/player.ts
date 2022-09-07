@@ -1,4 +1,6 @@
+import { Attributes } from 'sequelize';
 import { LivingEntity } from '../';
+import { Character } from '~/models';
 import {
   PublicLivingEntity,
   Snapshot,
@@ -50,6 +52,20 @@ export default class Player extends LivingEntity {
     this.port = port;
   }
 
+  static async generate(
+    character: Attributes<Character>,
+  ): Promise<Player | null> {
+    // We first check if a player already exists for this character
+    // I need to check which type we should use for raw
+    let player = await Player.get(character.id);
+    if (!player) {
+      player = new Player({
+        ...character,
+      });
+    }
+    return player;
+  }
+
   // TODO: Id will be a string eventually
   static async get(id: number): Promise<Player | null> {
     let player: Player | undefined = players.get<Player>(id);
@@ -62,22 +78,6 @@ export default class Player extends LivingEntity {
           player = new Player(playerData);
         }
         done();
-      });
-    }
-    if (!player) {
-      // TODO: Get from database
-      return new Player({
-        id,
-        position: { x: 3, y: 0.5, z: -3 },
-        health: 10,
-        maxHealth: 10,
-        speed: 3,
-        attackRange: 1,
-        attackSpeed: 1,
-        visionRange: game.VISION_DISTANCE,
-        // TODO: Ignoring this since is temporary until we have a database
-        // @ts-ignore
-        mapId: process.env.MAP_NAME,
       });
     }
     return player || null;
@@ -95,7 +95,9 @@ export default class Player extends LivingEntity {
     if (!ignoreCache) players.set(this.id, this);
     if (cacheOnly) return;
     const key = redisConstants.PLAYERS_KEY_PREFIX + this.id;
-    await redis.set(key, JSON.stringify(this.getData()));
+    await redis.set(key, JSON.stringify(this.getData()), {
+      EX: redisConstants.PLAYERS_TTL,
+    });
   }
 
   getData() {

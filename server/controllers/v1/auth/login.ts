@@ -21,31 +21,32 @@
  */
 
 import { NextFunction, Request, Response } from 'express';
+import { Attributes } from 'sequelize';
 import generateSnapshot from '~/controllers/generateSnapshot';
 import { Player, Map } from '~/models';
-import { UnexpectedError, NotFound } from '~/errors';
-
-// TODO: This is a counter that will be removed once we have a database
-// To get user's ids
-let playerCounter = 0;
+import { User, Character } from '~/models';
+import { NotFound, UnexpectedError } from '~/errors';
 
 export default async (req: Request, res: Response, next: NextFunction) => {
   // In the future this info will be returned by the select character or something like that
   const { ip } = req;
-  const { port } = req.body;
-  // TODO: Use username and password
-  const id = playerCounter++;
-  const player = await Player.get(id);
+  const { port, username } = req.body;
+  // TODO: Use password
+  const user = await User.get(username);
+  if (!user) return next(new NotFound());
+  const characters: Attributes<Character>[] = await user.getCharacters({
+    raw: true,
+  });
+  if (!characters || characters.length === 0) return next(new NotFound());
+  const player = await Player.generate(characters[0]);
   if (!player) return next(new NotFound());
   player.updateNetworkData(ip, port);
-  if (player.mapId) {
-    const map = Map.get(player.mapId);
-    if (!map) {
-      return next(new UnexpectedError('Map not found.'));
-    }
-    player.setMap(map);
+  const map = Map.get(player.mapId);
+  if (!map) {
+    return next(new UnexpectedError('Map not found.'));
   }
+  player.setMap(map);
   player.save();
   const snapshot = await generateSnapshot();
-  return res.status(200).json({ id, snapshot });
+  return res.status(200).json({ port, snapshot });
 };
