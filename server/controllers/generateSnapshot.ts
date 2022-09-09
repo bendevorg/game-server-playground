@@ -5,7 +5,6 @@ import { players as playersCache, enemies as enemiesCache } from '~/cache';
 
 export default (): Promise<Snapshot> => {
   return new Promise<Snapshot>(async (resolve, reject) => {
-    // TODO: This should get things from cache -> redis -> database
     const playerIds: Array<string> | undefined = playersCache.keys();
     const enemyIds: Array<string> | undefined = enemiesCache.keys();
     if (!playerIds || !enemyIds) {

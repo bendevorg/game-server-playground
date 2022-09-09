@@ -229,7 +229,7 @@ export default class Player extends LivingEntity {
         timestamp: snapshot.timestamp,
       };
       // TODO: Can we improve the size of this buffer even further?
-      // Players length + Players + Enemies length + Enemies
+      // Timestamp + Players length + Players + Enemies length + Enemies
       const buffer = Buffer.alloc(
         network.FLOAT_SIZE +
           network.INT8_SIZE +
