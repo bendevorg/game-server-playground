@@ -1,5 +1,4 @@
 import inputQueue from '~/utils/inputQueue';
-import sendSnapshots from '~/controllers/sendSnapshots';
 import processInput from '~/controllers/processInput';
 import updatePlayerStates from '~/controllers/updatePlayerStates';
 import updateEnemyStates from '~/controllers/updateEnemyStates';
@@ -12,7 +11,7 @@ import { Map } from '~/models';
 const gameLoop = async (map: Map) => {
   // We can fire the start the next tick rate countdown immediately since we have locks
   // To prevent concurrency errors
-  setTimeout(() => gameLoop(map), 1000 / engine.TICK_RATE);
+  setTimeout(() => gameLoop(map), 1000 / engine.GAME_TICK_RATE);
   // We store the queue length so we don't
   // Process inputs that are arriving in the middle of this game loop
   // TODO: Should we order these inputs by timestamp?
@@ -45,7 +44,6 @@ const gameLoop = async (map: Map) => {
     }
     done();
   });
-  sendSnapshots();
 };
 
 export default gameLoop;

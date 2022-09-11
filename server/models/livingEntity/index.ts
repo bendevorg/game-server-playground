@@ -90,7 +90,7 @@ export default class LivingEntity {
     this.attack();
   }
 
-  retrievePublicData() {
+  retrieveSnapshotData() {
     return new Promise<PublicLivingEntity>((resolve) => {
       lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
         resolve({

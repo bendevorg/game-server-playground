@@ -17,7 +17,7 @@ export default (): Promise<Snapshot> => {
         logger.error('Player id in online list but not in cache');
         return;
       }
-      const data = await player.retrievePublicData();
+      const data = await player.retrieveSnapshotData();
       players.push(data);
     });
     const enemies: Array<PublicLivingEntity> = [];
@@ -27,7 +27,7 @@ export default (): Promise<Snapshot> => {
         logger.error('Player id in online list but not in cache');
         return;
       }
-      const data = await enemy.retrievePublicData();
+      const data = await enemy.retrieveSnapshotData();
       enemies.push(data);
     });
     return resolve({

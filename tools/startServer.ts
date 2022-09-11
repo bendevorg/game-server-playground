@@ -10,6 +10,7 @@ import router from '~/core/router';
 import Map from '~/models/map';
 import onMessage from '~/core/onMessage';
 import gameLoop from '~/core/gameLoop';
+import sendLoop from '~/core/sendLoop';
 import { game } from '~/constants';
 import { maps } from '~/cache';
 // Importing so the database authenticates
@@ -29,6 +30,7 @@ const map = new Map(game.MAP_NAME);
 maps.set(game.MAP_NAME, map);
 
 gameLoop(map);
+sendLoop();
 app.listen(PORT ? parseInt(PORT) : 8080, '0.0.0.0', () => {
   console.info('🌎  HTTP server is listening on port %s.', PORT);
 });
