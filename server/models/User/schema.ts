@@ -12,4 +12,9 @@ export default {
     allowNull: false,
     notEmpty: true,
   },
+  admin: {
+    type: DataTypes.BOOLEAN,
+    default: false,
+    allowNull: false,
+  },
 };
