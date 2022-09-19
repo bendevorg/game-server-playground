@@ -47,6 +47,8 @@ export default async (req: Request, res: Response, next: NextFunction) => {
   }
   player.setMap(map);
   player.save();
-  const snapshot = await generateSnapshot();
+  const mapSnapshot = await generateSnapshot(false);
+  const snapshot = await player.generateSnapshotForPlayer(mapSnapshot);
+  // TODO: Generate and send a connection token
   return res.status(200).json({ port, snapshot, map: player.mapId });
 };

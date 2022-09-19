@@ -4,11 +4,11 @@ import { Snapshot } from '~/interfaces';
 import generateSnapshot from '~/controllers/generateSnapshot';
 import { players as playersCache } from '~/cache';
 
-export default () => {
+export default <T extends boolean>(reduced?: T) => {
   return new Promise<void>(async (resolve, reject) => {
     let snapshot: Snapshot;
     try {
-      snapshot = await generateSnapshot();
+      snapshot = await generateSnapshot(reduced);
     } catch (error) {
       logger.error(error as object);
       return reject();

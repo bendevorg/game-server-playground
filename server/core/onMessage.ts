@@ -2,7 +2,7 @@ import { RemoteInfo } from 'dgram';
 import { network } from '~/constants';
 import inputQueue from '~/utils/inputQueue';
 
-export default (buffer: Buffer, senderInfo: RemoteInfo) => {
+export default (buffer: Buffer, senderInfo?: RemoteInfo) => {
   if (buffer.length === 0) {
     console.error('Invalid received buffer');
     return;

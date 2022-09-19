@@ -17,6 +17,7 @@ import { maps } from '~/cache';
 import database from '~/models';
 
 const { PORT } = process.env;
+const { SOCKET_PORT } = process.env;
 const app = express();
 app.use('/', router);
 
@@ -34,5 +35,5 @@ sendLoop();
 app.listen(PORT ? parseInt(PORT) : 8080, '0.0.0.0', () => {
   console.info('🌎  HTTP server is listening on port %s.', PORT);
 });
-socket.start(PORT ? parseInt(PORT) : 8080);
+socket.start(SOCKET_PORT ? parseInt(SOCKET_PORT) : 5600);
 socket.setMessageCallback(onMessage);

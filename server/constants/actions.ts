@@ -1,5 +1,6 @@
 export default {
-  PING: 0,
-  MOVEMENT: 1,
-  ATTACK: 2,
+  AUTHENTICATE: 0,
+  PING: 1,
+  NEW_TARGET_POSITION: 2,
+  ATTACK: 3,
 };

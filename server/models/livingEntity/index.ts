@@ -3,7 +3,7 @@ import {
   Path,
   Position,
   Node,
-  PublicLivingEntity,
+  ConditionalSnapshotLivingEntity,
   LivingEntityConstructor,
   GridLine,
   GridPosition,
@@ -90,16 +90,22 @@ export default class LivingEntity {
     this.attack();
   }
 
-  retrieveSnapshotData() {
-    return new Promise<PublicLivingEntity>((resolve) => {
+  retrieveSnapshotData<T extends boolean>(reduced?: boolean) {
+    return new Promise<ConditionalSnapshotLivingEntity<T>>((resolve) => {
       lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
-        resolve({
+        const reducedData = {
           id: this.id,
           position: this.position,
+        };
+        if (reduced)
+          return resolve(reducedData as ConditionalSnapshotLivingEntity<T>);
+        resolve({
+          ...reducedData,
           health: this.health,
           maxHealth: this.maxHealth,
           speed: this.speed,
-        });
+          attackRange: this.attackRange,
+        } as ConditionalSnapshotLivingEntity<T>);
         done();
       });
     });

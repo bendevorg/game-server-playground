@@ -1,6 +1,8 @@
 export { default as Snapshot } from './snapshot';
-export { default as PublicLivingEntity } from './publicLivingEntity';
+export { default as SnapshotLivingEntity } from './snapshotLivingEntity';
 export { default as LivingEntityConstructor } from './livingEntityConstructor';
+export { default as ReducedSnapshotLivingEntity } from './reducedSnapshotLivingEntity';
+export type { ConditionalSnapshotLivingEntity } from './conditionalSnapshotLivingEntity';
 export { default as PlayerConstructor } from './playerConstructor';
 export { default as EnemyConstructor } from './enemyConstructor';
 export { default as Position } from './position';

@@ -2,10 +2,11 @@ import { Attributes } from 'sequelize';
 import { LivingEntity } from '../';
 import { Character } from '~/models';
 import {
-  PublicLivingEntity,
+  SnapshotLivingEntity,
   Snapshot,
   PlayerConstructor,
   Position,
+  ReducedSnapshotLivingEntity,
 } from '~/interfaces';
 import {
   game,
@@ -18,6 +19,7 @@ import socket from '~/core/socket';
 import lock from '~/utils/lock';
 import redis from '~/utils/redis';
 import isInRange from '~/utils/isInRange';
+import isFullLivingEntity from '~/utils/isFullLivingEntity';
 import { players } from '~/cache';
 
 export default class Player extends LivingEntity {
@@ -207,10 +209,14 @@ export default class Player extends LivingEntity {
     });
   }
 
-  sendSnapshot(snapshot: Snapshot) {
-    return new Promise<void>(async (resolve, reject) => {
-      let visiblePlayers: Array<PublicLivingEntity> = [];
-      let visibleEnemies: Array<PublicLivingEntity> = [];
+  async generateSnapshotForPlayer(snapshot: Snapshot) {
+    return new Promise<Snapshot>(async (resolve, reject) => {
+      let visiblePlayers: Array<
+        SnapshotLivingEntity | ReducedSnapshotLivingEntity
+      > = [];
+      let visibleEnemies: Array<
+        SnapshotLivingEntity | ReducedSnapshotLivingEntity
+      > = [];
       // We lock the position here because we could be using it for the pathfinding
       // In another async task, this avoid concurrency errors
       await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
@@ -223,11 +229,17 @@ export default class Player extends LivingEntity {
         );
         done();
       });
-      const playerSnapshot = {
+      return resolve({
         players: visiblePlayers,
         enemies: visibleEnemies,
         timestamp: snapshot.timestamp,
-      };
+      });
+    });
+  }
+
+  async sendSnapshot(snapshot: Snapshot) {
+    return new Promise<void>(async (resolve, reject) => {
+      const playerSnapshot = await this.generateSnapshotForPlayer(snapshot);
       // TODO: Can we improve the size of this buffer even further?
       // Timestamp + Players length + Players + Enemies length + Enemies
       const buffer = Buffer.alloc(
@@ -261,6 +273,11 @@ export default class Player extends LivingEntity {
         buffer.writeInt16LE(player.position.z * 100, offset + playerOffset);
         playerOffset += network.INT16_SIZE;
 
+        if (!isFullLivingEntity(player)) {
+          offset += network.BUFFER_REDUCED_PLAYER_SIZE;
+          return;
+        }
+
         buffer.writeInt16LE(player.health, offset + playerOffset);
         playerOffset += network.INT16_SIZE;
 
@@ -268,6 +285,9 @@ export default class Player extends LivingEntity {
         playerOffset += network.INT16_SIZE;
 
         buffer.writeUInt8(player.speed, offset + playerOffset);
+        playerOffset += network.INT8_SIZE;
+
+        buffer.writeUInt8(player.attackRange, offset + playerOffset);
         offset += network.BUFFER_PLAYER_SIZE;
       });
       buffer.writeUInt8(playerSnapshot.enemies.length, offset);
@@ -286,6 +306,11 @@ export default class Player extends LivingEntity {
         buffer.writeInt16LE(enemy.position.z * 100, offset + enemyOffset);
         enemyOffset += network.INT16_SIZE;
 
+        if (!isFullLivingEntity(enemy)) {
+          offset += network.BUFFER_REDUCED_ENEMY_SIZE;
+          return;
+        }
+
         buffer.writeInt16LE(enemy.health, offset + enemyOffset);
         enemyOffset += network.INT16_SIZE;
 
@@ -293,9 +318,12 @@ export default class Player extends LivingEntity {
         enemyOffset += network.INT16_SIZE;
 
         buffer.writeUInt8(enemy.speed, offset + enemyOffset);
+        enemyOffset += network.INT8_SIZE;
+
+        buffer.writeUInt8(enemy.attackRange, offset + enemyOffset);
         offset += network.BUFFER_ENEMY_SIZE;
       });
-      socket.sendMessage(buffer, this.ip, this.port);
+      socket.sendUdpMessage(buffer, this.ip, this.port);
     });
   }
 
