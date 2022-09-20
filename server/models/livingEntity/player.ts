@@ -244,7 +244,7 @@ export default class Player extends LivingEntity {
       // TODO: Can we improve the size of this buffer even further?
       // Timestamp + Players length + Players + Enemies length + Enemies
       const bufferSize =
-        network.FLOAT_SIZE +
+        network.INT64_SIZE +
         network.INT8_SIZE +
         (reduced
           ? network.BUFFER_REDUCED_PLAYER_SIZE
@@ -258,7 +258,7 @@ export default class Player extends LivingEntity {
       const buffer = Buffer.alloc(bufferSize);
       const message = new NetworkMessage(buffer);
       // TODO: Can we improve this? Timestamp doesn't fit in an int 32
-      message.writeFloat(snapshot.timestamp);
+      message.writeLong(BigInt(snapshot.timestamp));
       // This might need to change into a Uint16 since the length can be bigger than 255
       // In some extreme scenarios
       message.writeUInt8(playerSnapshot.players.length);
@@ -274,8 +274,6 @@ export default class Player extends LivingEntity {
         // We multiply this by a 100 because we store this in a short (int 16) to save space
         // But that doesn't have decimals, so we multiply it here and divide on the client
         message.writeInt16(player.position.z * 100);
-        // @ts-ignore
-        console.log(player.maxHealth);
         if (!isFullLivingEntity(player)) {
           return;
         }

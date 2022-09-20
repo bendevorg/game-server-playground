@@ -1,6 +1,7 @@
 export default {
   DOUBLE_SIZE: 8,
   FLOAT_SIZE: 4,
+  INT64_SIZE: 8,
   INT32_SIZE: 4,
   INT16_SIZE: 2,
   INT8_SIZE: 1,
