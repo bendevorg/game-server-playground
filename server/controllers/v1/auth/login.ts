@@ -38,7 +38,8 @@ export default async (req: Request, res: Response, next: NextFunction) => {
     raw: true,
   });
   if (!characters || characters.length === 0) return next(new NotFound());
-  const player = await Player.generate(characters[0]);
+  const selectedCharater = characters[0];
+  const player = await Player.generate(selectedCharater);
   if (!player) return next(new NotFound());
   player.updateNetworkData(ip, port);
   const map = Map.get(player.mapId);
@@ -50,5 +51,7 @@ export default async (req: Request, res: Response, next: NextFunction) => {
   const mapSnapshot = await generateSnapshot(false);
   const snapshot = await player.generateSnapshotForPlayer(mapSnapshot);
   // TODO: Generate and send a connection token
-  return res.status(200).json({ port, snapshot, map: player.mapId });
+  return res
+    .status(200)
+    .json({ id: selectedCharater.id, snapshot, map: player.mapId });
 };
