@@ -20,6 +20,7 @@ import lock from '~/utils/lock';
 import redis from '~/utils/redis';
 import isInRange from '~/utils/isInRange';
 import isFullLivingEntity from '~/utils/isFullLivingEntity';
+import NetworkMessage from '~/utils/networkMessage';
 import { players } from '~/cache';
 
 export default class Player extends LivingEntity {
@@ -237,93 +238,73 @@ export default class Player extends LivingEntity {
     });
   }
 
-  async sendSnapshot(snapshot: Snapshot) {
+  async sendSnapshot(snapshot: Snapshot, reduced?: boolean) {
     return new Promise<void>(async (resolve, reject) => {
       const playerSnapshot = await this.generateSnapshotForPlayer(snapshot);
       // TODO: Can we improve the size of this buffer even further?
       // Timestamp + Players length + Players + Enemies length + Enemies
-      const buffer = Buffer.alloc(
+      const bufferSize =
         network.FLOAT_SIZE +
-          network.INT8_SIZE +
-          network.BUFFER_PLAYER_SIZE * playerSnapshot.players.length +
-          network.INT8_SIZE +
-          network.BUFFER_ENEMY_SIZE * playerSnapshot.enemies.length,
-      );
+        network.INT8_SIZE +
+        (reduced
+          ? network.BUFFER_REDUCED_PLAYER_SIZE
+          : network.BUFFER_PLAYER_SIZE) *
+          playerSnapshot.players.length +
+        network.INT8_SIZE +
+        (reduced
+          ? network.BUFFER_REDUCED_ENEMY_SIZE
+          : network.BUFFER_ENEMY_SIZE) *
+          playerSnapshot.enemies.length;
+      const buffer = Buffer.alloc(bufferSize);
+      const message = new NetworkMessage(buffer);
       // TODO: Can we improve this? Timestamp doesn't fit in an int 32
-      buffer.writeFloatLE(snapshot.timestamp);
-      let offset = network.FLOAT_SIZE;
+      message.writeFloat(snapshot.timestamp);
       // This might need to change into a Uint16 since the length can be bigger than 255
       // In some extreme scenarios
-      buffer.writeUInt8(playerSnapshot.players.length, offset);
-      offset += network.INT8_SIZE;
+      message.writeUInt8(playerSnapshot.players.length);
       // TODO: We are creating these buffers every time we need to send it to a player
       // We could cache them
       // Also we should improve this code, it has a lot of repetition
       playerSnapshot.players.forEach(async (player) => {
-        let playerOffset = 0;
-        buffer.writeUInt16LE(player.id, offset);
-        playerOffset += network.INT16_SIZE;
+        message.writeUInt16(player.id);
         // We multiply this by a 100 because we store this in a short (int 16) to save space
         // But that doesn't have decimals, so we multiply it here and divide on the client
-        buffer.writeInt16LE(player.position.x * 100, offset + playerOffset);
-        playerOffset += network.INT16_SIZE;
+        message.writeInt16(player.position.x * 100);
         // TODO: Add Y when it makes sense
         // We multiply this by a 100 because we store this in a short (int 16) to save space
         // But that doesn't have decimals, so we multiply it here and divide on the client
-        buffer.writeInt16LE(player.position.z * 100, offset + playerOffset);
-        playerOffset += network.INT16_SIZE;
-
+        message.writeInt16(player.position.z * 100);
+        // @ts-ignore
+        console.log(player.maxHealth);
         if (!isFullLivingEntity(player)) {
-          offset += network.BUFFER_REDUCED_PLAYER_SIZE;
           return;
         }
-
-        buffer.writeInt16LE(player.health, offset + playerOffset);
-        playerOffset += network.INT16_SIZE;
-
-        buffer.writeInt16LE(player.maxHealth, offset + playerOffset);
-        playerOffset += network.INT16_SIZE;
-
-        buffer.writeUInt8(player.speed, offset + playerOffset);
-        playerOffset += network.INT8_SIZE;
-
-        buffer.writeUInt8(player.attackRange, offset + playerOffset);
-        offset += network.BUFFER_PLAYER_SIZE;
+        message.writeInt16(player.health);
+        message.writeInt16(player.maxHealth);
+        message.writeUInt8(player.speed);
+        message.writeUInt8(player.attackRange);
       });
-      buffer.writeUInt8(playerSnapshot.enemies.length, offset);
-      offset += network.INT8_SIZE;
+      message.writeUInt8(playerSnapshot.enemies.length);
       playerSnapshot.enemies.forEach(async (enemy) => {
-        let enemyOffset = 0;
-        buffer.writeUInt16LE(enemy.id, offset);
-        enemyOffset += network.INT16_SIZE;
+        message.writeUInt16(enemy.id);
         // We multiply this by a 100 because we store this in a short (int 16) to save space
         // But that doesn't have decimals, so we multiply it here and divide on the client
-        buffer.writeInt16LE(enemy.position.x * 100, offset + enemyOffset);
-        enemyOffset += network.INT16_SIZE;
+        message.writeInt16(enemy.position.x * 100);
         // TODO: Add Y when it makes sense
         // We multiply this by a 100 because we store this in a short (int 16) to save space
         // But that doesn't have decimals, so we multiply it here and divide on the client
-        buffer.writeInt16LE(enemy.position.z * 100, offset + enemyOffset);
-        enemyOffset += network.INT16_SIZE;
-
+        message.writeInt16(enemy.position.z * 100);
         if (!isFullLivingEntity(enemy)) {
-          offset += network.BUFFER_REDUCED_ENEMY_SIZE;
           return;
         }
-
-        buffer.writeInt16LE(enemy.health, offset + enemyOffset);
-        enemyOffset += network.INT16_SIZE;
-
-        buffer.writeInt16LE(enemy.maxHealth, offset + enemyOffset);
-        enemyOffset += network.INT16_SIZE;
-
-        buffer.writeUInt8(enemy.speed, offset + enemyOffset);
-        enemyOffset += network.INT8_SIZE;
-
-        buffer.writeUInt8(enemy.attackRange, offset + enemyOffset);
-        offset += network.BUFFER_ENEMY_SIZE;
+        message.writeInt16(enemy.health);
+        message.writeInt16(enemy.maxHealth);
+        message.writeUInt8(enemy.speed);
+        message.writeUInt8(enemy.attackRange);
       });
-      socket.sendUdpMessage(buffer, this.ip, this.port);
+      socket.sendUdpMessage(message.buffer, this.ip, this.port);
+      // socket.sendTcpMessage(message.buffer, this.id);
+      return resolve();
     });
   }
 

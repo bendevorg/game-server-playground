@@ -20,7 +20,7 @@ export default <T extends boolean>(reduced?: T) => {
         logger.error('Player id found in key list but not in cache');
         return;
       }
-      player.sendSnapshot(snapshot);
+      player.sendSnapshot(snapshot, reduced);
     });
     return resolve();
   });

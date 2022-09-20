@@ -97,15 +97,16 @@ export default class LivingEntity {
           id: this.id,
           position: this.position,
         };
-        if (reduced)
-          return resolve(reducedData as ConditionalSnapshotLivingEntity<T>);
-        resolve({
-          ...reducedData,
-          health: this.health,
-          maxHealth: this.maxHealth,
-          speed: this.speed,
-          attackRange: this.attackRange,
-        } as ConditionalSnapshotLivingEntity<T>);
+        if (reduced) resolve(reducedData as ConditionalSnapshotLivingEntity<T>);
+        else {
+          resolve({
+            ...reducedData,
+            health: this.health,
+            maxHealth: this.maxHealth,
+            speed: this.speed,
+            attackRange: this.attackRange,
+          } as ConditionalSnapshotLivingEntity<T>);
+        }
         done();
       });
     });
@@ -205,8 +206,7 @@ export default class LivingEntity {
     let validClosestColumn =
       closestColumn > 0 && closestColumn < grid[candidateRow].length;
     if (
-      closestColumn > 0 &&
-      closestColumn < grid[candidateRow].length &&
+      validClosestColumn &&
       grid[candidateRow][closestColumn].type == constants.GROUND_TILE
     ) {
       return grid[candidateRow][closestColumn];

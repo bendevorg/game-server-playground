@@ -1,30 +1,26 @@
 import { Map, Player, Enemy } from '~/models';
-import { actions, network } from '~/constants';
+import NetworkMessage from '~/utils/networkMessage';
+import { actions } from '~/constants';
 import { Position } from '~/interfaces';
 
 export default (input: Buffer, map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
-    const timestamp = input.readDoubleLE();
-    let offset = network.DOUBLE_SIZE;
-    const id = input.readUInt16LE(offset);
-    offset += network.INT16_SIZE;
+    const message = new NetworkMessage(input);
+    const timestamp = message.readDouble();
+    const id = message.readUInt16();
     const player = Player.getActive(id);
     if (!player) {
       return reject('Player does not exist');
     }
-    const action = input[offset];
-    offset += network.INT8_SIZE;
+    const action = message.readUInt8();
     switch (action) {
       case actions.PING:
         break;
-      case actions.MOVEMENT:
-        const targetX = input.readInt16LE(offset);
-        offset += network.INT16_SIZE;
-        const targetZ = input.readInt16LE(offset);
-        offset += network.INT16_SIZE;
-        const currentX = input.readInt16LE(offset);
-        offset += network.INT16_SIZE;
-        const currentZ = input.readInt16LE(offset);
+      case actions.NEW_TARGET_POSITION:
+        const targetX = message.readInt16();
+        const targetZ = message.readInt16();
+        const currentX = message.readInt16();
+        const currentZ = message.readInt16();
         // The position is a short where the last 2 numbers are decimals
         // Multiplying by 1.0 so it turns into a float
         const targetPosition: Position = {
@@ -37,6 +33,7 @@ export default (input: Buffer, map: Map) => {
           y: 0,
           z: (currentZ * 1.0) / 100,
         };
+        // TODO: We should check if the movement is within the vision range
         const accepted = await player.attemptToSyncPosition(
           currentPosition,
           timestamp,
@@ -57,7 +54,7 @@ export default (input: Buffer, map: Map) => {
         player.setLastMovement(timestamp);
         break;
       case actions.ATTACK:
-        const targetId = input.readUInt16LE(offset);
+        const targetId = message.readUInt16();
         const target = Enemy.getActive(targetId);
         if (!target) {
           return reject('Invalid target');
