@@ -30,7 +30,7 @@ import { NotFound, UnexpectedError } from '~/errors';
 export default async (req: Request, res: Response, next: NextFunction) => {
   // In the future this info will be returned by the select character or something like that
   const { ip } = req;
-  const { port, username } = req.body;
+  const { port, username, tcpOnly } = req.body;
   // TODO: Use password
   const user = await User.get(username);
   if (!user) return next(new NotFound());
@@ -41,7 +41,7 @@ export default async (req: Request, res: Response, next: NextFunction) => {
   const selectedCharater = characters[0];
   const player = await Player.generate(selectedCharater);
   if (!player) return next(new NotFound());
-  player.updateNetworkData(ip, port);
+  player.updateNetworkData(ip, port, tcpOnly);
   const map = Map.get(player.mapId);
   if (!map) {
     return next(new UnexpectedError('Map not found.'));

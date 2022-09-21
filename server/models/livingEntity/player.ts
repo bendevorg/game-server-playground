@@ -26,6 +26,7 @@ import { players } from '~/cache';
 export default class Player extends LivingEntity {
   ip: string;
   port: number;
+  tcpOnly: boolean;
 
   constructor({
     id,
@@ -39,6 +40,7 @@ export default class Player extends LivingEntity {
     mapId,
     ip,
     port,
+    tcpOnly = false,
   }: PlayerConstructor) {
     super({
       id,
@@ -53,6 +55,7 @@ export default class Player extends LivingEntity {
     });
     this.ip = ip;
     this.port = port;
+    this.tcpOnly = tcpOnly;
   }
 
   static async generate(
@@ -132,9 +135,10 @@ export default class Player extends LivingEntity {
     super.update();
   }
 
-  updateNetworkData(ip: string, port: number) {
+  updateNetworkData(ip: string, port: number, tcpOnly: boolean = false) {
     this.ip = ip;
     this.port = port;
+    this.tcpOnly = tcpOnly;
   }
 
   // Some times the client will sent some information about the current state
@@ -305,8 +309,11 @@ export default class Player extends LivingEntity {
           new Promise((resolve) => setTimeout(resolve, 300));
         await latency();
       }
-      // socket.sendUdpMessage(message.buffer, this.ip, this.port);
-      socket.sendTcpMessage(message.buffer, this.id);
+      if (this.tcpOnly) {
+        socket.sendTcpMessage(message.buffer, this.id);
+      } else {
+        socket.sendUdpMessage(message.buffer, this.ip, this.port);
+      }
       return resolve();
     });
   }

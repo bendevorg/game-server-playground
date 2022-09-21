@@ -6,6 +6,7 @@ const schema = joi.object().keys({
   password: joi.string().required(),
   // TODO: Remove this
   port: joi.number().required(),
+  tcpOnly: joi.boolean(),
 });
 
 export default (req: Request, _res: Response, next: NextFunction) => {
