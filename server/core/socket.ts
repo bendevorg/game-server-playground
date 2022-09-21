@@ -1,5 +1,6 @@
 import dgram, { Socket as SocketType, RemoteInfo } from 'dgram';
 import { Server, Socket as TcpSocket, createServer } from 'net';
+import logger from 'log-champ';
 import { actions, network } from '~/constants';
 
 class Socket {
@@ -62,6 +63,9 @@ class Socket {
       if (!id) return;
       delete this.tcpClientToSocket[id];
       delete this.tcpSocketToClient[socketStringfied];
+    });
+    socket.on('error', (err) => {
+      logger.error(err);
     });
   }
 
