@@ -248,7 +248,7 @@ export default class Player extends LivingEntity {
       // TODO: Can we improve the size of this buffer even further?
       // Timestamp + Players length + Players + Enemies length + Enemies
       const bufferSize =
-        network.INT64_SIZE +
+        network.DOUBLE_SIZE +
         network.INT8_SIZE +
         (reduced
           ? network.BUFFER_REDUCED_PLAYER_SIZE
@@ -261,8 +261,8 @@ export default class Player extends LivingEntity {
           playerSnapshot.enemies.length;
       const buffer = Buffer.alloc(bufferSize);
       const message = new NetworkMessage(buffer);
-      // TODO: Can we improve this? Timestamp doesn't fit in an int 32
-      message.writeLong(BigInt(snapshot.timestamp));
+      // TODO: We could be more efficient and send only the last 5 or 6 digits of the timestamp
+      message.writeDouble(snapshot.timestamp);
       // This might need to change into a Uint16 since the length can be bigger than 255
       // In some extreme scenarios
       message.writeUInt8(playerSnapshot.players.length);
