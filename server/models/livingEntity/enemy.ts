@@ -1,12 +1,16 @@
 import { LivingEntity, Player } from '../';
 import { State } from '../livingEntity';
 import lock from '~/utils/lock';
+import randomIntFromInterval from '~/utils/randomIntFromInterval';
 import { game, locks } from '~/constants';
 import { enemies } from '~/cache';
 
 export default class Enemy extends LivingEntity {
   calculatingNextPath = false;
   nextTimeToMove = 0;
+  // TODO: This should be a per enemy configuration
+  minTimeBetweenRandomMovements = 1500;
+  maxTimeBetweenRandomMovements = 3000;
 
   // TODO: Id will be a string eventually
   static getActive(id: number | string): Enemy | null {
@@ -33,21 +37,26 @@ export default class Enemy extends LivingEntity {
       return;
     }
     // TODO: Actual AI
-    const players = Player.getAllActiveIds();
-    if (!this.target && players.length > 0) {
-      const player = Player.getActive(players[0]);
-      if (player) {
-        this.setupAttack(player);
-        return;
-      }
-    }
+    // const players = Player.getAllActiveIds();
+    // if (!this.target && players.length > 0) {
+    //   const player = Player.getActive(players[0]);
+    //   if (player) {
+    //     this.setupAttack(player);
+    //     return;
+    //   }
+    // }
     if (this.state === State.MOVING) {
       return;
     }
     const now = new Date().getTime();
     if (this.state === State.STAND_BY) {
       if (this.previousState === State.MOVING) {
-        this.nextTimeToMove = now + 3000;
+        this.nextTimeToMove =
+          now +
+          randomIntFromInterval(
+            this.minTimeBetweenRandomMovements,
+            this.maxTimeBetweenRandomMovements,
+          );
         return;
       }
       if (now <= this.nextTimeToMove) {
