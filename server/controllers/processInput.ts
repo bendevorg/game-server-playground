@@ -6,21 +6,21 @@ import { Position } from '~/interfaces';
 export default (input: Buffer, map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
     const message = new NetworkMessage(input);
-    const timestamp = message.readDouble();
-    const id = message.readUInt16();
+    const timestamp = message.popDouble();
+    const id = message.popUInt16();
     const player = Player.getActive(id);
     if (!player) {
       return reject('Player does not exist');
     }
-    const action = message.readUInt8();
+    const action = message.popUInt8();
     switch (action) {
       case actions.PING:
         break;
       case actions.NEW_TARGET_POSITION:
-        const targetX = message.readInt16();
-        const targetZ = message.readInt16();
-        const currentX = message.readInt16();
-        const currentZ = message.readInt16();
+        const targetX = message.popInt16();
+        const targetZ = message.popInt16();
+        const currentX = message.popInt16();
+        const currentZ = message.popInt16();
         // The position is a short where the last 2 numbers are decimals
         // Multiplying by 1.0 so it turns into a float
         const targetPosition: Position = {
@@ -54,7 +54,7 @@ export default (input: Buffer, map: Map) => {
         player.setLastMovement(timestamp);
         break;
       case actions.ATTACK:
-        const targetId = message.readUInt16();
+        const targetId = message.popUInt16();
         const target = Enemy.getActive(targetId);
         if (!target) {
           return reject('Invalid target');

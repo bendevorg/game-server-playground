@@ -49,27 +49,31 @@ export default class NetworkMessage {
     this.offset += network.INT64_SIZE;
   }
 
-  readDouble() {
+  popDouble() {
     const value = this.buffer.readDoubleLE(this.offset);
     this.offset += network.DOUBLE_SIZE;
     return value;
   }
 
-  readInt16() {
+  popInt16() {
     const value = this.buffer.readInt16LE(this.offset);
     this.offset += network.INT16_SIZE;
     return value;
   }
 
-  readUInt16() {
+  popUInt16() {
     const value = this.buffer.readUInt16LE(this.offset);
     this.offset += network.INT16_SIZE;
     return value;
   }
 
-  readUInt8() {
+  popUInt8() {
     const value = this.buffer[this.offset];
     this.offset += network.INT8_SIZE;
     return value;
+  }
+
+  resetOffset() {
+    this.offset = 0;
   }
 }
