@@ -9,11 +9,6 @@ export default class NetworkMessage {
     this.offset = 0;
   }
 
-  writeFloat(value: number) {
-    this.buffer.writeFloatLE(value, this.offset);
-    this.offset += network.FLOAT_SIZE;
-  }
-
   writeUInt8(value: number) {
     this.buffer.writeUInt8(value, this.offset);
     this.offset += network.INT8_SIZE;
@@ -49,15 +44,19 @@ export default class NetworkMessage {
     this.offset += network.INT64_SIZE;
   }
 
-  popDouble() {
-    const value = this.buffer.readDoubleLE(this.offset);
-    this.offset += network.DOUBLE_SIZE;
-    return value;
+  writeFloat(value: number) {
+    this.buffer.writeFloatLE(value, this.offset);
+    this.offset += network.FLOAT_SIZE;
   }
 
-  popInt16() {
-    const value = this.buffer.readInt16LE(this.offset);
-    this.offset += network.INT16_SIZE;
+  writeDouble(value: number) {
+    this.buffer.writeDoubleLE(value, this.offset);
+    this.offset += network.DOUBLE_SIZE;
+  }
+
+  popUInt8() {
+    const value = this.buffer[this.offset];
+    this.offset += network.INT8_SIZE;
     return value;
   }
 
@@ -67,9 +66,45 @@ export default class NetworkMessage {
     return value;
   }
 
-  popUInt8() {
-    const value = this.buffer[this.offset];
-    this.offset += network.INT8_SIZE;
+  popInt16() {
+    const value = this.buffer.readInt16LE(this.offset);
+    this.offset += network.INT16_SIZE;
+    return value;
+  }
+
+  popUInt32() {
+    const value = this.buffer.readUInt32LE(this.offset);
+    this.offset += network.INT32_SIZE;
+    return value;
+  }
+
+  popInt32() {
+    const value = this.buffer.readInt32LE(this.offset);
+    this.offset += network.INT32_SIZE;
+    return value;
+  }
+
+  popULong() {
+    const value = this.buffer.readBigUInt64LE(this.offset);
+    this.offset += network.INT64_SIZE;
+    return value;
+  }
+
+  popLong() {
+    const value = this.buffer.readBigInt64LE(this.offset);
+    this.offset += network.INT64_SIZE;
+    return value;
+  }
+
+  popFloat() {
+    const value = this.buffer.readFloatLE(this.offset);
+    this.offset += network.FLOAT_SIZE;
+    return value;
+  }
+
+  popDouble() {
+    const value = this.buffer.readDoubleLE(this.offset);
+    this.offset += network.DOUBLE_SIZE;
     return value;
   }
 
