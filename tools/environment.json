@@ -2,7 +2,7 @@
   "development": {
     "NODE_ENV": "development",
     "MAP_NAME": "test",
-    "PORT": 8080,
+    "PORT": 5600,
     "SOCKET_PORT": 8888
   },
   "production": {
