@@ -1,4 +1,5 @@
 import { DataTypes } from 'sequelize';
+import { character } from '~/constants';
 
 export default {
   // TODO: This should be an UUIDV4 like the user
@@ -20,41 +21,36 @@ export default {
     type: DataTypes.JSON,
     allowNull: false,
     notEmpty: true,
+    default: character.STARTING_POSITION,
   },
   health: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    default: 0,
+    default: character.STARTING_HEALTH,
   },
   maxHealth: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    default: 0,
+    default: character.STARTING_HEALTH,
   },
   speed: {
     type: DataTypes.FLOAT,
     allowNull: false,
-    default: 0,
+    default: character.STARTING_SPEED,
   },
   attackRange: {
     type: DataTypes.FLOAT,
     allowNull: false,
-    default: 0,
+    default: character.STARTING_ATTACK_RANGE,
   },
   attackSpeed: {
     type: DataTypes.FLOAT,
     allowNull: false,
-    default: 0,
+    default: character.STARTING_ATTACK_SPEED,
   },
-  visionRange: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    default: 0,
-  },
-  // TODO: This should not be like this
   mapId: {
     type: DataTypes.STRING,
     allowNull: false,
-    default: 'test',
+    default: character.STARTING_MAP,
   },
 };

@@ -8,6 +8,7 @@ const controllers = retrieveControllers(routerName);
 const schemas = retrieveSchemas(routerName);
 
 router.post('/login', schemas.login, controllers.login);
+router.post('/signup', schemas.signup, controllers.signup);
 router.post('/disconnect', schemas.disconnect, controllers.disconnect);
 
 export default router;
