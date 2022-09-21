@@ -300,8 +300,13 @@ export default class Player extends LivingEntity {
         message.writeUInt8(enemy.speed);
         message.writeUInt8(enemy.attackRange);
       });
-      socket.sendUdpMessage(message.buffer, this.ip, this.port);
-      // socket.sendTcpMessage(message.buffer, this.id);
+      if (engine.DEV_MODE && engine.LATENCY > 0) {
+        const latency = () =>
+          new Promise((resolve) => setTimeout(resolve, 300));
+        await latency();
+      }
+      // socket.sendUdpMessage(message.buffer, this.ip, this.port);
+      socket.sendTcpMessage(message.buffer, this.id);
       return resolve();
     });
   }

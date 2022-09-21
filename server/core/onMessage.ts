@@ -1,8 +1,8 @@
 import { RemoteInfo } from 'dgram';
-import { network } from '~/constants';
+import { network, engine } from '~/constants';
 import inputQueue from '~/utils/inputQueue';
 
-export default (buffer: Buffer, senderInfo?: RemoteInfo) => {
+export default async (buffer: Buffer, senderInfo?: RemoteInfo) => {
   if (buffer.length === 0) {
     console.error('Invalid received buffer');
     return;
@@ -14,9 +14,11 @@ export default (buffer: Buffer, senderInfo?: RemoteInfo) => {
   if (buffer.length === 0) {
     return;
   }
-  // Uncomment this to simulate latency
-  // const a = () => new Promise((resolve) => setTimeout(resolve, 300));
-  // await a();
+  if (engine.DEV_MODE && engine.LATENCY > 0) {
+    const latency = () =>
+      new Promise((resolve) => setTimeout(resolve, engine.LATENCY));
+    await latency();
+  }
   // We add the timestamp as soon as we receive the input and not from the client
   // Since they can manipulate the timestamp to seem like they did something in a different time
   const timestamp = new Date().getTime();
