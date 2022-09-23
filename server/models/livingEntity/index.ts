@@ -278,6 +278,11 @@ export default class LivingEntity {
       }
       let nodes: Array<Node> = [];
 
+      // If is not within vision range we don't calculate anything
+      if (!isInRange(start.position, end.position, game.VISION_DISTANCE)) {
+        return resolve();
+      }
+
       //  Calculating path
       // If a straight path is valid we don't need to run a*
       // The path will be those 2 nodes.
@@ -340,7 +345,12 @@ export default class LivingEntity {
             //  If this neighbour was explored already we skip it
             if (
               `${currentNode.neighbors[i].gridPosition.row}-${currentNode.neighbors[i].gridPosition.column}` in
-              exploredListHash
+                exploredListHash ||
+              !isInRange(
+                currentNode.neighbors[i].position,
+                start.position,
+                game.VISION_DISTANCE,
+              )
             ) {
               continue;
             }
