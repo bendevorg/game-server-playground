@@ -8,6 +8,5 @@ export default interface LivingEntityConstructor {
   speed: number;
   attackRange: number;
   attackSpeed: number;
-  visionRange: number;
   mapId: string;
 }

@@ -6,7 +6,7 @@ import { players as playersCache } from '~/cache';
 export default () => {
   return new Promise<void>(async (resolve, reject) => {
     const players = playersCache.keys();
-    players.forEach((playerId) => {
+    players.forEach(async (playerId) => {
       const player = playersCache.get<Player>(playerId);
       if (!player) {
         logger.error('Player id found in key list but not in cache');
@@ -18,7 +18,7 @@ export default () => {
         playersCache.del(playerId);
         return;
       }
-      player.update();
+      await player.update();
       playersCache.set(playerId, player);
     });
     return resolve();

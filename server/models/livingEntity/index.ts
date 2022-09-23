@@ -1,4 +1,4 @@
-import { Map } from '../';
+import { Map, Player, Enemy } from '../';
 import {
   Path,
   Position,
@@ -28,13 +28,14 @@ export default class LivingEntity {
   health: number;
   maxHealth: number;
   speed: number;
+  attackMinDamage: number;
+  attackMaxDamage: number;
   attackRange: number;
   attackSpeed: number;
-  visionRange: number;
   target?: LivingEntity;
   lastUpdate: number;
   lastMovement: number;
-  lastPathAttackUpdate: number;
+  lastAttackStart: number;
   timeForNextAttack: number;
   mapId: string;
   map?: Map;
@@ -47,7 +48,6 @@ export default class LivingEntity {
     speed,
     attackRange,
     attackSpeed,
-    visionRange,
     mapId,
   }: LivingEntityConstructor) {
     this.id = id;
@@ -55,16 +55,24 @@ export default class LivingEntity {
     this.health = health;
     this.maxHealth = maxHealth;
     this.speed = speed;
+    this.attackMinDamage = 0;
+    this.attackMaxDamage = 0;
     this.attackRange = attackRange;
     this.attackSpeed = attackSpeed;
-    this.visionRange = visionRange;
     this.mapId = mapId;
     this.target = undefined;
     const now = new Date().getTime();
     this.lastUpdate = now;
     this.lastMovement = now;
-    this.lastPathAttackUpdate = now;
+    this.lastAttackStart = now;
     this.timeForNextAttack = now;
+    this.updateValues();
+  }
+
+  updateValues() {
+    // Use formula based of entity attributes
+    this.attackMinDamage = 1;
+    this.attackMaxDamage = 3;
   }
 
   setMap(map: Map) {
@@ -79,15 +87,19 @@ export default class LivingEntity {
     this.lastMovement = timestamp || new Date().getTime();
   }
 
-  setLastPathUpdate() {
-    this.lastPathAttackUpdate =
-      new Date().getTime() + game.TIME_BETWEEN_PATH_UPDATES;
+  setLastAttackStart(timestamp?: number) {
+    this.lastAttackStart = timestamp || new Date().getTime();
   }
 
-  update() {
+  setTimeForNextAttack(timestamp?: number) {
+    this.timeForNextAttack =
+      timestamp || new Date().getTime() + (1 / this.attackSpeed) * 1000;
+  }
+
+  async update() {
     this.updateState();
-    this.move();
-    this.attack();
+    await this.move();
+    await this.attack();
   }
 
   retrieveSnapshotData() {
@@ -106,25 +118,37 @@ export default class LivingEntity {
     });
   }
 
-  updateState() {
-    this.previousState = this.state;
-    if (this.target) {
-      if (!isInRange(this.position, this.target.position, this.visionRange)) {
+  async updateState() {
+    await lock.acquire(locks.ENTITY_STATE + this.id, async (done) => {
+      await lock.acquire(locks.ENTITY_TARGET + this.id, (done) => {
+        this.previousState = this.state;
+        if (this.target) {
+          if (
+            !isInRange(this.position, this.target.position, this.attackRange)
+          ) {
+            this.state = State.MOVING_TO_ATTACK;
+            done();
+            return;
+          }
+          this.state = State.ATTACKING;
+          done();
+          return;
+        }
+        if (this.path && this.path.waypoints.length > 0) {
+          this.state = State.MOVING;
+          done();
+          return;
+        }
         this.state = State.STAND_BY;
-        this.target = undefined;
-        return;
-      }
-      if (!isInRange(this.position, this.target.position, this.attackRange)) {
-        this.state = State.MOVING_TO_ATTACK;
-        return;
-      }
-      this.state = State.ATTACKING;
-    }
-    if (this.path && this.path.waypoints.length > 0) {
-      this.state = State.MOVING;
-      return;
-    }
-    this.state = State.STAND_BY;
+        done();
+      });
+      done();
+    });
+  }
+
+  isLineOfSightClear(line: GridLine) {
+    if (!this.map) return false;
+    return !this.map.isLineCrossingAnObject(line);
   }
 
   // If there is no objects between the two points
@@ -135,7 +159,7 @@ export default class LivingEntity {
       pointA: start.gridPosition,
       pointB: end.gridPosition,
     };
-    return !this.map.isLineCrossingAnObject(line);
+    return this.isLineOfSightClear(line);
   }
 
   async attemptToFindNewStart(start: Node, end: Node, grid: Node[][]) {
@@ -525,39 +549,30 @@ export default class LivingEntity {
         }
 
         const now = new Date().getTime();
-        // If we are attacking let's see if we are in range
         if (
-          this.target &&
-          this.path.waypoints.length === 1 &&
-          magnitude <= this.attackRange
+          magnitude <= game.MIN_DISTANCE_FOR_NEXT_WAYPOINT &&
+          this.path.waypoints.length === 1
         ) {
-          this.path = undefined;
+          this.position = {
+            ...this.position,
+            x: this.path.waypoints[0].x,
+            z: this.path.waypoints[0].z,
+          };
+          this.path.waypoints.pop();
         } else {
-          if (
-            magnitude <= game.MIN_DISTANCE_FOR_NEXT_WAYPOINT &&
-            this.path.waypoints.length === 1
-          ) {
-            this.position = {
-              ...this.position,
-              x: this.path.waypoints[0].x,
-              z: this.path.waypoints[0].z,
-            };
-            this.path.waypoints.pop();
-          } else {
-            const directionX = distanceX / magnitude;
-            const directionZ = distanceZ / magnitude;
-            const timeSinceLastUpdate =
-              ((currentTimestamp || now) - this.lastMovement) / 1000;
-            const distanceToMoveInX =
-              directionX * this.speed * timeSinceLastUpdate;
-            const distanceToMoveInZ =
-              directionZ * this.speed * timeSinceLastUpdate;
-            this.position = {
-              ...this.position,
-              x: this.position.x + distanceToMoveInX,
-              z: this.position.z + distanceToMoveInZ,
-            };
-          }
+          const directionX = distanceX / magnitude;
+          const directionZ = distanceZ / magnitude;
+          const timeSinceLastUpdate =
+            ((currentTimestamp || now) - this.lastMovement) / 1000;
+          const distanceToMoveInX =
+            directionX * this.speed * timeSinceLastUpdate;
+          const distanceToMoveInZ =
+            directionZ * this.speed * timeSinceLastUpdate;
+          this.position = {
+            ...this.position,
+            x: this.position.x + distanceToMoveInX,
+            z: this.position.z + distanceToMoveInZ,
+          };
         }
         this.setLastMovement(now);
         done();
@@ -576,39 +591,75 @@ export default class LivingEntity {
   }
 
   async attack() {
-    if (!this.target) {
-      return;
-    }
-    if (!isInRange(this.position, this.target.position, this.visionRange)) {
-      this.target = undefined;
-      return;
-    }
-    if (!isInRange(this.position, this.target.position, this.attackRange)) {
-      if (
-        !this.path ||
-        this.path.waypoints.length < 0 ||
-        (this.path.target.x !== this.target.position.x &&
-          this.path.target.z !== this.target.position.z)
-      ) {
-        const now = new Date().getTime();
-        if (now > this.lastPathAttackUpdate) {
-          this.calculatePath(this.target.position);
-          this.setLastPathUpdate();
-          this.setLastMovement(now);
-        }
+    await lock.acquire(locks.ENTITY_TARGET + this.id, async (done) => {
+      if (!this.target) {
+        done();
         return;
       }
-    }
+      if (
+        !Enemy.getActive(this.target.id) &&
+        !Player.getActive(this.target.id)
+      ) {
+        this.target = undefined;
+        done();
+        return;
+      }
+      if (
+        !isInRange(this.position, this.target.position, game.VISION_DISTANCE)
+      ) {
+        this.target = undefined;
+        done();
+        return;
+      }
+      const now = new Date().getTime();
+      if (
+        !isInRange(this.position, this.target.position, this.attackRange) ||
+        this.timeForNextAttack > now ||
+        !this.isLineOfSightToTargetClear()
+      ) {
+        done();
+        return;
+      }
+      // If we are attacking we can't have a path
+      // await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
+      //   this.path = undefined;
+      //   done();
+      // });
+      this.setTimeForNextAttack();
+      done();
+    });
+  }
+
+  isLineOfSightToTargetClear() {
+    if (!this.map || !this.target) return false;
+    const pointA = this.map.worldPositionToGridPosition(this.position);
+    const pointB = this.map.worldPositionToGridPosition(this.target.position);
+    const line: GridLine = {
+      pointA,
+      pointB,
+    };
+    return this.isLineOfSightClear(line);
   }
 
   async setupAttack(target: LivingEntity, timestamp?: number) {
-    if (!isInRange(this.position, target.position, this.visionRange)) {
+    if (
+      !target ||
+      (this.target && this.target.id === target.id) ||
+      target.id === this.id ||
+      (!Enemy.getActive(target.id) && !Player.getActive(target.id))
+    )
       return;
-    }
-    if (!isInRange(this.position, target.position, this.attackRange)) {
-      await this.calculatePath(target.position);
-      this.setLastMovement(timestamp);
-    }
-    this.target = target;
+    await lock.acquire(locks.ENTITY_TARGET + this.id, async (done) => {
+      if (!isInRange(this.position, target.position, game.VISION_DISTANCE)) {
+        return;
+      }
+      this.target = target;
+      // await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
+      //   this.path = undefined;
+      //   done();
+      // });
+      done();
+    });
+    this.setLastAttackStart(timestamp);
   }
 }

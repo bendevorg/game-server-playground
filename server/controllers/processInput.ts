@@ -17,6 +17,7 @@ export default (input: Buffer, map: Map) => {
       case actions.PING:
         break;
       case actions.NEW_TARGET_POSITION:
+        console.log('New target position');
         const targetX = message.popInt16();
         const targetZ = message.popInt16();
         const currentX = message.popInt16();
@@ -54,19 +55,15 @@ export default (input: Buffer, map: Map) => {
         player.setLastMovement(timestamp);
         break;
       case actions.ATTACK:
+        console.log('Attack');
         const targetId = message.popUInt16();
         const target = Enemy.getActive(targetId);
         if (!target) {
           return reject('Invalid target');
         }
-        // We should apply the movement between last and this tick before changing paths
+        // We should apply the movement between last and this tick before changing to attack
         await player.move(timestamp);
-        player.setupAttack(target);
-        // This last movement is assigned here so in the next server tick
-        // After the path is calculated we will move taking into account the time
-        // Between this timestamp and the future tick timestamp
-        // TODO: player.move already sets last movement, do we really need this here?
-        player.setLastMovement(timestamp);
+        player.setupAttack(target, timestamp);
         break;
       default:
         return reject('Invalid action');

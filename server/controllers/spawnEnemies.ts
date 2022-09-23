@@ -1,8 +1,9 @@
 import { Enemy, Map } from '~/models';
-import { game } from '~/constants';
 
 // TODO: Thil will be overwritten
-let enemyCounter = 0;
+// Starting at 100 so enemy ids doesn't conflict with player ids
+// For now
+let enemyCounter = 100;
 
 export default (map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
@@ -18,7 +19,6 @@ export default (map: Map) => {
           speed: 1.5,
           attackRange: 1,
           attackSpeed: 1,
-          visionRange: game.VISION_DISTANCE,
           mapId: map.id,
         });
         enemy.setMap(map);

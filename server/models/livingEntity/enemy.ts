@@ -3,14 +3,24 @@ import { State } from '../livingEntity';
 import lock from '~/utils/lock';
 import randomIntFromInterval from '~/utils/randomIntFromInterval';
 import { game, locks } from '~/constants';
+import { Position } from '~/interfaces';
+import isInRange from '~/utils/isInRange';
 import { enemies } from '~/cache';
 
 export default class Enemy extends LivingEntity {
+  lastPathAttackUpdate = 0;
   calculatingNextPath = false;
   nextTimeToMove = 0;
   // TODO: This should be a per enemy configuration
   minTimeBetweenRandomMovements = 1500;
   maxTimeBetweenRandomMovements = 3000;
+
+  lastTargetCalculatedPosition: Position = {
+    x: -9999,
+    y: -9999,
+    z: -9999,
+  };
+  minimumDistanceForRepath = 0.5;
 
   // TODO: Id will be a string eventually
   static getActive(id: number | string): Enemy | null {
@@ -26,25 +36,33 @@ export default class Enemy extends LivingEntity {
     enemies.set(this.id, this);
   }
 
-  update() {
-    this.ai();
-    super.update();
+  setLastPathUpdate() {
+    this.lastPathAttackUpdate =
+      new Date().getTime() +
+      game.TIME_BETWEEN_PATH_ATTACK_UPDATES +
+      // Adding some randomization so we avoid calculating a lot of paths at the same time
+      randomIntFromInterval(-150, 150);
   }
 
-  ai() {
+  async update() {
+    await this.ai();
+    await super.update();
+  }
+
+  async ai() {
     this.updateState();
     if (this.target) {
       return;
     }
     // TODO: Actual AI
-    // const players = Player.getAllActiveIds();
-    // if (!this.target && players.length > 0) {
-    //   const player = Player.getActive(players[0]);
-    //   if (player) {
-    //     this.setupAttack(player);
-    //     return;
-    //   }
-    // }
+    const players = Player.getAllActiveIds();
+    if (!this.target && players.length > 0) {
+      const player = Player.getActive(players[0]);
+      if (player) {
+        await this.setupAttack(player);
+        return;
+      }
+    }
     if (this.state === State.MOVING) {
       return;
     }
@@ -95,5 +113,50 @@ export default class Enemy extends LivingEntity {
     }
     await this.setupMovement(nodeToWalkTo.position);
     this.calculatingNextPath = false;
+  }
+
+  async attack() {
+    await super.attack();
+    await lock.acquire(locks.ENTITY_TARGET + this.id, async (done) => {
+      if (!this.target) {
+        done();
+        return;
+      }
+      if (
+        isInRange(this.position, this.target.position, this.attackRange) &&
+        super.isLineOfSightToTargetClear()
+      ) {
+        done();
+        return;
+      }
+      if (
+        !this.path ||
+        this.path.waypoints.length < 0 ||
+        (this.path.target.x !== this.target.position.x &&
+          this.path.target.z !== this.target.position.z)
+      ) {
+        const now = new Date().getTime();
+        if (
+          now > this.lastPathAttackUpdate &&
+          this.targetMovedSinceLastPathCalculation()
+        ) {
+          this.calculatePath(this.target.position);
+          this.setLastPathUpdate();
+          this.setLastMovement(now);
+          this.lastTargetCalculatedPosition = { ...this.target.position };
+        }
+        done();
+        return;
+      }
+      done();
+    });
+  }
+
+  targetMovedSinceLastPathCalculation() {
+    if (!this.target) return false;
+    const distanceX = this.position.x - this.target.position.x;
+    const distanceZ = this.position.z - this.target.position.z;
+    const distance = distanceX * distanceX + distanceZ * distanceZ;
+    return distance >= this.minimumDistanceForRepath;
   }
 }

@@ -1,5 +1,5 @@
 import { Attributes } from 'sequelize';
-import { LivingEntity } from '../';
+import { LivingEntity, Enemy } from '../';
 import { Character } from '~/models';
 import {
   SnapshotLivingEntity,
@@ -36,7 +36,6 @@ export default class Player extends LivingEntity {
     speed,
     attackRange,
     attackSpeed,
-    visionRange,
     mapId,
     ip,
     port,
@@ -50,7 +49,6 @@ export default class Player extends LivingEntity {
       speed,
       attackRange,
       attackSpeed,
-      visionRange,
       mapId,
     });
     this.ip = ip;
@@ -115,7 +113,6 @@ export default class Player extends LivingEntity {
       speed,
       attackRange,
       attackSpeed,
-      visionRange,
       mapId,
     } = this;
     return {
@@ -126,13 +123,12 @@ export default class Player extends LivingEntity {
       speed,
       attackRange,
       attackSpeed,
-      visionRange,
       mapId,
     };
   }
 
-  update() {
-    super.update();
+  async update() {
+    await super.update();
   }
 
   updateNetworkData(ip: string, port: number, tcpOnly: boolean = false) {
