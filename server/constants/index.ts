@@ -10,3 +10,4 @@ export { default as locks } from './locks';
 export { default as redis } from './redis';
 export { default as database } from './database';
 export { default as character } from './character';
+export { default as networkMessage } from './networkMessage';

@@ -4,11 +4,11 @@ import { Snapshot } from '~/interfaces';
 import generateSnapshot from '~/controllers/generateSnapshot';
 import { players as playersCache } from '~/cache';
 
-export default <T extends boolean>(reduced?: T) => {
+export default () => {
   return new Promise<void>(async (resolve, reject) => {
     let snapshot: Snapshot;
     try {
-      snapshot = await generateSnapshot(reduced);
+      snapshot = await generateSnapshot();
     } catch (error) {
       logger.error(error as object);
       return reject();
@@ -20,7 +20,7 @@ export default <T extends boolean>(reduced?: T) => {
         logger.error('Player id found in key list but not in cache');
         return;
       }
-      player.sendSnapshot(snapshot, reduced);
+      player.sendUpdates(snapshot);
     });
     return resolve();
   });

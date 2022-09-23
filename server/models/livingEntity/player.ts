@@ -6,7 +6,6 @@ import {
   Snapshot,
   PlayerConstructor,
   Position,
-  ReducedSnapshotLivingEntity,
 } from '~/interfaces';
 import {
   game,
@@ -14,12 +13,13 @@ import {
   locks,
   redis as redisConstants,
   engine,
+  networkMessage,
 } from '~/constants';
 import socket from '~/core/socket';
 import lock from '~/utils/lock';
 import redis from '~/utils/redis';
 import isInRange from '~/utils/isInRange';
-import isFullLivingEntity from '~/utils/isFullLivingEntity';
+import LivingEntityBufferWriter from '~/utils/livingEntityBufferWriter';
 import NetworkMessage from '~/utils/networkMessage';
 import { players } from '~/cache';
 
@@ -216,12 +216,8 @@ export default class Player extends LivingEntity {
 
   async generateSnapshotForPlayer(snapshot: Snapshot) {
     return new Promise<Snapshot>(async (resolve, reject) => {
-      let visiblePlayers: Array<
-        SnapshotLivingEntity | ReducedSnapshotLivingEntity
-      > = [];
-      let visibleEnemies: Array<
-        SnapshotLivingEntity | ReducedSnapshotLivingEntity
-      > = [];
+      let visiblePlayers: Array<SnapshotLivingEntity> = [];
+      let visibleEnemies: Array<SnapshotLivingEntity> = [];
       // We lock the position here because we could be using it for the pathfinding
       // In another async task, this avoid concurrency errors
       await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
@@ -242,27 +238,29 @@ export default class Player extends LivingEntity {
     });
   }
 
-  async sendSnapshot(snapshot: Snapshot, reduced?: boolean) {
+  async sendUpdates(snapshot: Snapshot) {
     return new Promise<void>(async (resolve, reject) => {
       const playerSnapshot = await this.generateSnapshotForPlayer(snapshot);
-      // TODO: Can we improve the size of this buffer even further?
-      // Timestamp + Players length + Players + Enemies length + Enemies
+      this.sendPositionSnapshot(playerSnapshot);
+      resolve();
+      // TODO: Check if we need to send a full snapshot
+    });
+  }
+
+  async sendPositionSnapshot(playerSnapshot: Snapshot) {
+    return new Promise<void>(async (resolve, reject) => {
       const bufferSize =
+        network.INT8_SIZE +
         network.DOUBLE_SIZE +
         network.INT8_SIZE +
-        (reduced
-          ? network.BUFFER_REDUCED_PLAYER_SIZE
-          : network.BUFFER_PLAYER_SIZE) *
-          playerSnapshot.players.length +
+        network.BUFFER_REDUCED_PLAYER_SIZE * playerSnapshot.players.length +
         network.INT8_SIZE +
-        (reduced
-          ? network.BUFFER_REDUCED_ENEMY_SIZE
-          : network.BUFFER_ENEMY_SIZE) *
-          playerSnapshot.enemies.length;
+        network.BUFFER_REDUCED_ENEMY_SIZE * playerSnapshot.enemies.length;
       const buffer = Buffer.alloc(bufferSize);
       const message = new NetworkMessage(buffer);
+      message.writeUInt8(networkMessage.POSITION_SNAPSHOT);
       // TODO: We could be more efficient and send only the last 5 or 6 digits of the timestamp
-      message.writeDouble(snapshot.timestamp);
+      message.writeDouble(playerSnapshot.timestamp);
       // This might need to change into a Uint16 since the length can be bigger than 255
       // In some extreme scenarios
       message.writeUInt8(playerSnapshot.players.length);
@@ -270,39 +268,16 @@ export default class Player extends LivingEntity {
       // We could cache them
       // Also we should improve this code, it has a lot of repetition
       playerSnapshot.players.forEach(async (player) => {
-        message.writeUInt16(player.id);
-        // We multiply this by a 100 because we store this in a short (int 16) to save space
-        // But that doesn't have decimals, so we multiply it here and divide on the client
-        message.writeInt16(player.position.x * 100);
-        // TODO: Add Y when it makes sense
-        // We multiply this by a 100 because we store this in a short (int 16) to save space
-        // But that doesn't have decimals, so we multiply it here and divide on the client
-        message.writeInt16(player.position.z * 100);
-        if (!isFullLivingEntity(player)) {
-          return;
-        }
-        message.writeInt16(player.health);
-        message.writeInt16(player.maxHealth);
-        message.writeUInt8(player.speed);
-        message.writeUInt8(player.attackRange);
+        const entityBufferWriter = new LivingEntityBufferWriter(
+          player,
+          message,
+        );
+        entityBufferWriter.writePositionUpdateData();
       });
       message.writeUInt8(playerSnapshot.enemies.length);
       playerSnapshot.enemies.forEach(async (enemy) => {
-        message.writeUInt16(enemy.id);
-        // We multiply this by a 100 because we store this in a short (int 16) to save space
-        // But that doesn't have decimals, so we multiply it here and divide on the client
-        message.writeInt16(enemy.position.x * 100);
-        // TODO: Add Y when it makes sense
-        // We multiply this by a 100 because we store this in a short (int 16) to save space
-        // But that doesn't have decimals, so we multiply it here and divide on the client
-        message.writeInt16(enemy.position.z * 100);
-        if (!isFullLivingEntity(enemy)) {
-          return;
-        }
-        message.writeInt16(enemy.health);
-        message.writeInt16(enemy.maxHealth);
-        message.writeUInt8(enemy.speed);
-        message.writeUInt8(enemy.attackRange);
+        const entityBufferWriter = new LivingEntityBufferWriter(enemy, message);
+        entityBufferWriter.writePositionUpdateData();
       });
       if (engine.DEV_MODE && engine.LATENCY > 0) {
         const latency = () =>

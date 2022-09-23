@@ -3,10 +3,10 @@ import {
   Path,
   Position,
   Node,
-  ConditionalSnapshotLivingEntity,
   LivingEntityConstructor,
   GridLine,
   GridPosition,
+  SnapshotLivingEntity,
 } from '~/interfaces';
 import { map as constants, game, locks } from '~/constants';
 import lock from '~/utils/lock';
@@ -90,23 +90,17 @@ export default class LivingEntity {
     this.attack();
   }
 
-  retrieveSnapshotData<T extends boolean>(reduced?: boolean) {
-    return new Promise<ConditionalSnapshotLivingEntity<T>>((resolve) => {
+  retrieveSnapshotData() {
+    return new Promise<SnapshotLivingEntity>((resolve) => {
       lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
-        const reducedData = {
+        resolve({
           id: this.id,
           position: this.position,
-        };
-        if (reduced) resolve(reducedData as ConditionalSnapshotLivingEntity<T>);
-        else {
-          resolve({
-            ...reducedData,
-            health: this.health,
-            maxHealth: this.maxHealth,
-            speed: this.speed,
-            attackRange: this.attackRange,
-          } as ConditionalSnapshotLivingEntity<T>);
-        }
+          health: this.health,
+          maxHealth: this.maxHealth,
+          speed: this.speed,
+          attackRange: this.attackRange,
+        });
         done();
       });
     });

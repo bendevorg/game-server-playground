@@ -1,7 +1,7 @@
-import { SnapshotLivingEntity, ReducedSnapshotLivingEntity } from '.';
+import { SnapshotLivingEntity } from '.';
 
 export default interface Snapshot {
-  players: Array<SnapshotLivingEntity | ReducedSnapshotLivingEntity>;
-  enemies: Array<SnapshotLivingEntity | ReducedSnapshotLivingEntity>;
+  players: Array<SnapshotLivingEntity>;
+  enemies: Array<SnapshotLivingEntity>;
   timestamp: number;
 }
