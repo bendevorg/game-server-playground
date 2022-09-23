@@ -39,6 +39,11 @@ export default async (req: Request, res: Response, next: NextFunction) => {
   });
   if (!characters || characters.length === 0) return next(new NotFound());
   const selectedCharater = characters[0];
+  if (Player.getActive(selectedCharater.id)) {
+    return res.status(401).json({
+      data: 'Character is already logged in.',
+    });
+  }
   const player = await Player.generate(selectedCharater);
   if (!player) return next(new NotFound());
   player.updateNetworkData(ip, port, tcpOnly);
