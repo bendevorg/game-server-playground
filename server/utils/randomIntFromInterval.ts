@@ -1,3 +1,5 @@
+import randomFromInterval from '~/utils/randomFromInterval';
+
 export default function randomIntFromInterval(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1) + min);
+  return Math.floor(randomFromInterval(min, max));
 }

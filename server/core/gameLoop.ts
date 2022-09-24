@@ -38,7 +38,7 @@ const gameLoop = async (map: Map) => {
     try {
       await updatePlayerStates();
       await updateEnemyStates();
-      await spawnEnemies(map);
+      spawnEnemies(map);
     } catch (err) {
       console.error(err);
     }

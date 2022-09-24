@@ -33,6 +33,7 @@ export default class Enemy extends LivingEntity {
   }
 
   save() {
+    if (this.state === State.DEAD) return;
     enemies.set(this.id, this);
   }
 
@@ -55,14 +56,14 @@ export default class Enemy extends LivingEntity {
       return;
     }
     // TODO: Actual AI
-    const players = Player.getAllActiveIds();
-    if (!this.target && players.length > 0) {
-      const player = Player.getActive(players[0]);
-      if (player) {
-        await this.setupAttack(player);
-        return;
-      }
-    }
+    // const players = Player.getAllActiveIds();
+    // if (!this.target && players.length > 0) {
+    //   const player = Player.getActive(players[0]);
+    //   if (player) {
+    //     await this.setupAttack(player);
+    //     return;
+    //   }
+    // }
     if (this.state === State.MOVING) {
       return;
     }
@@ -92,7 +93,6 @@ export default class Enemy extends LivingEntity {
       return;
     }
     this.calculatingNextPath = true;
-    this.health--;
     let startNode;
     await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
       if (this.map) {
@@ -158,5 +158,9 @@ export default class Enemy extends LivingEntity {
     const distanceZ = this.position.z - this.target.position.z;
     const distance = distanceX * distanceX + distanceZ * distanceZ;
     return distance >= this.minimumDistanceForRepath;
+  }
+
+  async die(attacker: LivingEntity) {
+    super.die(attacker);
   }
 }

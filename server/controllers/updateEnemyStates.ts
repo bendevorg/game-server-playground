@@ -8,7 +8,7 @@ export default () => {
       const enemy = Enemy.getActive(enemyId);
       if (!enemy) {
         logger.error('Enemy id found in key list but not in cache');
-        return;
+        return reject();
       }
       await enemy.update();
       enemy.save();

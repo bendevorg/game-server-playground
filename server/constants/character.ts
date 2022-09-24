@@ -4,6 +4,8 @@ export default {
     y: 0.5,
     z: -3,
   },
+  STARTING_LEVEL: 1,
+  STARTING_EXPERIENCE: 0,
   STARTING_HEALTH: 10,
   STARTING_SPEED: 3,
   STARTING_ATTACK_RANGE: 1,

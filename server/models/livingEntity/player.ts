@@ -31,6 +31,8 @@ export default class Player extends LivingEntity {
   constructor({
     id,
     position,
+    level,
+    experience,
     health,
     maxHealth,
     speed,
@@ -44,11 +46,14 @@ export default class Player extends LivingEntity {
     super({
       id,
       position,
+      level,
+      experience,
       health,
       maxHealth,
       speed,
       attackRange,
       attackSpeed,
+      experienceReward: 0,
       mapId,
     });
     this.ip = ip;
@@ -211,82 +216,102 @@ export default class Player extends LivingEntity {
   }
 
   async generateSnapshotForPlayer(snapshot: Snapshot) {
-    return new Promise<Snapshot>(async (resolve, reject) => {
-      let visiblePlayers: Array<SnapshotLivingEntity> = [];
-      let visibleEnemies: Array<SnapshotLivingEntity> = [];
-      // We lock the position here because we could be using it for the pathfinding
-      // In another async task, this avoid concurrency errors
-      await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
-        // Filter only visible players and monsters
-        visiblePlayers = snapshot.players.filter(({ position }) =>
-          isInRange(this.position, position, game.VISION_DISTANCE),
-        );
-        visibleEnemies = snapshot.enemies.filter(({ position }) =>
-          isInRange(this.position, position, game.VISION_DISTANCE),
-        );
-        done();
-      });
-      return resolve({
-        players: visiblePlayers,
-        enemies: visibleEnemies,
-        timestamp: snapshot.timestamp,
-      });
+    let visiblePlayers: Array<SnapshotLivingEntity> = [];
+    let visibleEnemies: Array<SnapshotLivingEntity> = [];
+    // We lock the position here because we could be using it for the pathfinding
+    // In another async task, this avoid concurrency errors
+    await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
+      // Filter only visible players and monsters
+      visiblePlayers = snapshot.players.filter(({ position }) =>
+        isInRange(this.position, position, game.VISION_DISTANCE),
+      );
+      visibleEnemies = snapshot.enemies.filter(({ position }) =>
+        isInRange(this.position, position, game.VISION_DISTANCE),
+      );
+      done();
     });
+    return {
+      players: visiblePlayers,
+      enemies: visibleEnemies,
+      timestamp: snapshot.timestamp,
+    };
   }
 
   async sendUpdates(snapshot: Snapshot) {
-    return new Promise<void>(async (resolve, reject) => {
-      const playerSnapshot = await this.generateSnapshotForPlayer(snapshot);
-      this.sendPositionSnapshot(playerSnapshot);
-      resolve();
-      // TODO: Check if we need to send a full snapshot
+    const playerSnapshot = await this.generateSnapshotForPlayer(snapshot);
+    this.sendPositionSnapshot(playerSnapshot);
+    // TODO: Only send the full snapshot when necessary.
+    this.sendFullSnapshot(playerSnapshot);
+  }
+
+  async sendFullSnapshot(playerSnapshot: Snapshot) {
+    const bufferSize =
+      network.INT8_SIZE +
+      network.DOUBLE_SIZE +
+      network.INT8_SIZE +
+      network.BUFFER_PLAYER_SIZE * playerSnapshot.players.length +
+      network.INT8_SIZE +
+      network.BUFFER_ENEMY_SIZE * playerSnapshot.enemies.length;
+    const buffer = Buffer.alloc(bufferSize);
+    const message = new NetworkMessage(buffer);
+    message.writeUInt8(networkMessage.FULL_SNAPSHOT);
+    // TODO: We could be more efficient and send only the last 5 or 6 digits of the timestamp
+    message.writeDouble(playerSnapshot.timestamp);
+    // This might need to change into a Uint16 since the length can be bigger than 255
+    // In some extreme scenarios
+    message.writeUInt8(playerSnapshot.players.length);
+    playerSnapshot.players.forEach(async (player) => {
+      const entityBufferWriter = new LivingEntityBufferWriter(player, message);
+      entityBufferWriter.writeFullData();
     });
+    message.writeUInt8(playerSnapshot.enemies.length);
+    playerSnapshot.enemies.forEach(async (enemy) => {
+      const entityBufferWriter = new LivingEntityBufferWriter(enemy, message);
+      entityBufferWriter.writeFullData();
+    });
+    if (engine.DEV_MODE && engine.LATENCY > 0) {
+      const latency = () => new Promise((resolve) => setTimeout(resolve, 300));
+      await latency();
+    }
+    socket.sendTcpMessage(message.buffer, this.id);
   }
 
   async sendPositionSnapshot(playerSnapshot: Snapshot) {
-    return new Promise<void>(async (resolve, reject) => {
-      const bufferSize =
-        network.INT8_SIZE +
-        network.DOUBLE_SIZE +
-        network.INT8_SIZE +
-        network.BUFFER_REDUCED_PLAYER_SIZE * playerSnapshot.players.length +
-        network.INT8_SIZE +
-        network.BUFFER_REDUCED_ENEMY_SIZE * playerSnapshot.enemies.length;
-      const buffer = Buffer.alloc(bufferSize);
-      const message = new NetworkMessage(buffer);
-      message.writeUInt8(networkMessage.POSITION_SNAPSHOT);
-      // TODO: We could be more efficient and send only the last 5 or 6 digits of the timestamp
-      message.writeDouble(playerSnapshot.timestamp);
-      // This might need to change into a Uint16 since the length can be bigger than 255
-      // In some extreme scenarios
-      message.writeUInt8(playerSnapshot.players.length);
-      // TODO: We are creating these buffers every time we need to send it to a player
-      // We could cache them
-      // Also we should improve this code, it has a lot of repetition
-      playerSnapshot.players.forEach(async (player) => {
-        const entityBufferWriter = new LivingEntityBufferWriter(
-          player,
-          message,
-        );
-        entityBufferWriter.writePositionUpdateData();
-      });
-      message.writeUInt8(playerSnapshot.enemies.length);
-      playerSnapshot.enemies.forEach(async (enemy) => {
-        const entityBufferWriter = new LivingEntityBufferWriter(enemy, message);
-        entityBufferWriter.writePositionUpdateData();
-      });
-      if (engine.DEV_MODE && engine.LATENCY > 0) {
-        const latency = () =>
-          new Promise((resolve) => setTimeout(resolve, 300));
-        await latency();
-      }
-      if (this.tcpOnly) {
-        socket.sendTcpMessage(message.buffer, this.id);
-      } else {
-        socket.sendUdpMessage(message.buffer, this.ip, this.port);
-      }
-      return resolve();
+    const bufferSize =
+      network.INT8_SIZE +
+      network.DOUBLE_SIZE +
+      network.INT8_SIZE +
+      network.BUFFER_POSITION_SIZE * playerSnapshot.players.length +
+      network.INT8_SIZE +
+      network.BUFFER_POSITION_SIZE * playerSnapshot.enemies.length;
+    const buffer = Buffer.alloc(bufferSize);
+    const message = new NetworkMessage(buffer);
+    message.writeUInt8(networkMessage.POSITION_SNAPSHOT);
+    // TODO: We could be more efficient and send only the last 5 or 6 digits of the timestamp
+    message.writeDouble(playerSnapshot.timestamp);
+    // This might need to change into a Uint16 since the length can be bigger than 255
+    // In some extreme scenarios
+    message.writeUInt8(playerSnapshot.players.length);
+    // TODO: We are creating these buffers every time we need to send it to a player
+    // We could cache them
+    playerSnapshot.players.forEach(async (player) => {
+      const entityBufferWriter = new LivingEntityBufferWriter(player, message);
+      entityBufferWriter.writePositionUpdateData();
     });
+    message.writeUInt8(playerSnapshot.enemies.length);
+    playerSnapshot.enemies.forEach(async (enemy) => {
+      const entityBufferWriter = new LivingEntityBufferWriter(enemy, message);
+      entityBufferWriter.writePositionUpdateData();
+    });
+    if (engine.DEV_MODE && engine.LATENCY > 0) {
+      const latency = () => new Promise((resolve) => setTimeout(resolve, 300));
+      await latency();
+    }
+    if (this.tcpOnly) {
+      socket.sendTcpMessage(message.buffer, this.id);
+    } else {
+      socket.sendUdpMessage(message.buffer, this.ip, this.port);
+    }
   }
 
   async disconnect() {

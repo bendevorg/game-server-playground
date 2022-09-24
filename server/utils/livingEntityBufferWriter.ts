@@ -40,6 +40,14 @@ export default class LivingEntityBufferWriter {
     this.message.writeUInt8(this.entity.attackRange);
   }
 
+  writeFullData() {
+    this.writePositionUpdateData();
+    this.writeHealth();
+    this.writeMaxHealth();
+    this.writeSpeed();
+    this.writeAttackRange();
+  }
+
   writePositionUpdateData() {
     this.writeId();
     this.writePosition();

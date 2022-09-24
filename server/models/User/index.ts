@@ -15,15 +15,11 @@ class User extends Model {
   }
 
   static async getOrCreate(username: string): Promise<[User, boolean] | null> {
-    return new Promise<[User, boolean] | null>(async (resolve, reject) => {
-      return resolve(
-        await User.findOrCreate({
-          where: { username },
-          defaults: {
-            admin: false,
-          },
-        }),
-      );
+    return await User.findOrCreate({
+      where: { username },
+      defaults: {
+        admin: false,
+      },
     });
   }
 

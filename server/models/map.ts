@@ -12,7 +12,11 @@ export default class Map {
   position: Position;
   squareSize: number;
   // TODO: Update this once we have a proper enemy data format in the map file
-  enemies: Array<{ id: number; amount: number }>;
+  enemies: Array<{
+    id: number;
+    amount: number;
+    spawnBounds: { minX: number; maxX: number; minZ: number; maxZ: number };
+  }>;
 
   constructor(mapName: string) {
     const mapFile = JSON.parse(

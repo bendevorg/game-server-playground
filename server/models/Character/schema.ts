@@ -28,6 +28,16 @@ export default {
     allowNull: false,
     default: character.STARTING_HEALTH,
   },
+  level: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    default: character.STARTING_LEVEL,
+  },
+  experience: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    default: character.STARTING_EXPERIENCE,
+  },
   maxHealth: {
     type: DataTypes.INTEGER,
     allowNull: false,

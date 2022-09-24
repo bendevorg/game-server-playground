@@ -11,12 +11,14 @@ import {
 import { map as constants, game, locks } from '~/constants';
 import lock from '~/utils/lock';
 import isInRange from '~/utils/isInRange';
+import randomIntFromInterval from '~/utils/randomIntFromInterval';
 
 export enum State {
   STAND_BY = 0,
   MOVING = 1,
   MOVING_TO_ATTACK = 2,
   ATTACKING = 3,
+  DEAD = 4,
 }
 
 export default class LivingEntity {
@@ -25,6 +27,8 @@ export default class LivingEntity {
   id: number;
   position: Position;
   path?: Path;
+  level: number;
+  experience: number;
   health: number;
   maxHealth: number;
   speed: number;
@@ -32,6 +36,7 @@ export default class LivingEntity {
   attackMaxDamage: number;
   attackRange: number;
   attackSpeed: number;
+  experienceReward: number;
   target?: LivingEntity;
   lastUpdate: number;
   lastMovement: number;
@@ -43,15 +48,20 @@ export default class LivingEntity {
   constructor({
     id,
     position,
+    level,
+    experience,
     health,
     maxHealth,
     speed,
     attackRange,
     attackSpeed,
+    experienceReward,
     mapId,
   }: LivingEntityConstructor) {
     this.id = id;
     this.position = position;
+    this.level = level;
+    this.experience = experience;
     this.health = health;
     this.maxHealth = maxHealth;
     this.speed = speed;
@@ -59,6 +69,7 @@ export default class LivingEntity {
     this.attackMaxDamage = 0;
     this.attackRange = attackRange;
     this.attackSpeed = attackSpeed;
+    this.experienceReward = experienceReward;
     this.mapId = mapId;
     this.target = undefined;
     const now = new Date().getTime();
@@ -96,6 +107,25 @@ export default class LivingEntity {
       timestamp || new Date().getTime() + (1 / this.attackSpeed) * 1000;
   }
 
+  async addHealth(health: number) {
+    await lock.acquire(locks.ENTITY_HEALTH + this, (done) => {
+      // We can't add health to a dead entity
+      if (this.health <= 0) {
+        done();
+        return;
+      }
+      this.health += health;
+      done();
+    });
+  }
+
+  async addExperience(experience: number) {
+    await lock.acquire(locks.ENTITY_EXPERIENCE + this, (done) => {
+      this.experience += experience;
+      done();
+    });
+  }
+
   async update() {
     this.updateState();
     await this.move();
@@ -120,6 +150,11 @@ export default class LivingEntity {
 
   async updateState() {
     await lock.acquire(locks.ENTITY_STATE + this.id, async (done) => {
+      if (this.health <= 0) {
+        this.state = State.DEAD;
+        done();
+        return;
+      }
       await lock.acquire(locks.ENTITY_TARGET + this.id, (done) => {
         this.previousState = this.state;
         if (this.target) {
@@ -625,6 +660,8 @@ export default class LivingEntity {
       //   this.path = undefined;
       //   done();
       // });
+      const damage = await this.calculateDamage();
+      await this.target.takeHit(damage, this);
       this.setTimeForNextAttack();
       done();
     });
@@ -661,5 +698,24 @@ export default class LivingEntity {
       done();
     });
     this.setLastAttackStart(timestamp);
+  }
+
+  async calculateDamage() {
+    return randomIntFromInterval(this.attackMinDamage, this.attackMaxDamage);
+  }
+
+  async takeHit(damage: number, attacker: LivingEntity) {
+    await this.addHealth(-damage);
+    if (this.health <= 0) {
+      this.die(attacker);
+    }
+  }
+
+  async die(attacker: LivingEntity) {
+    attacker.addExperience(this.experienceReward);
+    lock.acquire(locks.ENTITY_STATE + this.id, (done) => {
+      this.state = State.DEAD;
+      done();
+    });
   }
 }
