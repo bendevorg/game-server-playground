@@ -1,3 +1,4 @@
+import { events } from '~/constants';
 import { SnapshotLivingEntity } from '~/interfaces';
 import NetworkMessage from '~/utils/networkMessage';
 
@@ -24,6 +25,14 @@ export default class LivingEntityBufferWriter {
     this.message.writeInt16(this.entity.position.z * 100);
   }
 
+  writeLevel() {
+    this.message.writeUInt8(this.entity.level);
+  }
+
+  writeExperience() {
+    this.message.writeUInt16(this.entity.experience);
+  }
+
   writeHealth() {
     this.message.writeInt16(this.entity.health);
   }
@@ -40,8 +49,15 @@ export default class LivingEntityBufferWriter {
     this.message.writeUInt8(this.entity.attackRange);
   }
 
+  writeHitEvent(value: number) {
+    this.message.writeUInt8(events.HIT_EVENT);
+    this.message.writeInt16(value);
+  }
+
   writeFullData() {
     this.writePositionUpdateData();
+    this.writeLevel();
+    this.writeExperience();
     this.writeHealth();
     this.writeMaxHealth();
     this.writeSpeed();
@@ -51,5 +67,11 @@ export default class LivingEntityBufferWriter {
   writePositionUpdateData() {
     this.writeId();
     this.writePosition();
+  }
+
+  writeEvents(eventsData: Buffer, amountOfEvents: number) {
+    this.writeId();
+    this.message.writeUInt8(amountOfEvents);
+    this.message.appendBuffer(eventsData);
   }
 }

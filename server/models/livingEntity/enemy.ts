@@ -161,6 +161,7 @@ export default class Enemy extends LivingEntity {
   }
 
   async die(attacker: LivingEntity) {
-    super.die(attacker);
+    await super.die(attacker);
+    enemies.del(this.id);
   }
 }

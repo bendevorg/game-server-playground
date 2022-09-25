@@ -1,5 +1,5 @@
 import { Attributes } from 'sequelize';
-import { LivingEntity, Enemy } from '../';
+import { LivingEntity } from '../';
 import { Character } from '~/models';
 import {
   SnapshotLivingEntity,
@@ -21,12 +21,14 @@ import redis from '~/utils/redis';
 import isInRange from '~/utils/isInRange';
 import LivingEntityBufferWriter from '~/utils/livingEntityBufferWriter';
 import NetworkMessage from '~/utils/networkMessage';
+import simulateLatency from '~/utils/simulateLatency';
 import { players } from '~/cache';
 
 export default class Player extends LivingEntity {
   ip: string;
   port: number;
   tcpOnly: boolean;
+  lastGeneratedSnapshot?: Snapshot;
 
   constructor({
     id,
@@ -59,6 +61,7 @@ export default class Player extends LivingEntity {
     this.ip = ip;
     this.port = port;
     this.tcpOnly = tcpOnly;
+    this.lastGeneratedSnapshot = undefined;
   }
 
   static async generate(
@@ -240,8 +243,13 @@ export default class Player extends LivingEntity {
   async sendUpdates(snapshot: Snapshot) {
     const playerSnapshot = await this.generateSnapshotForPlayer(snapshot);
     this.sendPositionSnapshot(playerSnapshot);
-    // TODO: Only send the full snapshot when necessary.
+    this.sendEvents(playerSnapshot);
+    // TODO: Only send the full snapshot if new entities spawned.
     this.sendFullSnapshot(playerSnapshot);
+    lock.acquire(locks.ENTITY_LAST_SNAPSHOT, (done) => {
+      this.lastGeneratedSnapshot = playerSnapshot;
+      done();
+    });
   }
 
   async sendFullSnapshot(playerSnapshot: Snapshot) {
@@ -269,10 +277,7 @@ export default class Player extends LivingEntity {
       const entityBufferWriter = new LivingEntityBufferWriter(enemy, message);
       entityBufferWriter.writeFullData();
     });
-    if (engine.DEV_MODE && engine.LATENCY > 0) {
-      const latency = () => new Promise((resolve) => setTimeout(resolve, 300));
-      await latency();
-    }
+    await simulateLatency();
     socket.sendTcpMessage(message.buffer, this.id);
   }
 
@@ -292,26 +297,64 @@ export default class Player extends LivingEntity {
     // This might need to change into a Uint16 since the length can be bigger than 255
     // In some extreme scenarios
     message.writeUInt8(playerSnapshot.players.length);
-    // TODO: We are creating these buffers every time we need to send it to a player
-    // We could cache them
-    playerSnapshot.players.forEach(async (player) => {
+    playerSnapshot.players.forEach((player) => {
       const entityBufferWriter = new LivingEntityBufferWriter(player, message);
       entityBufferWriter.writePositionUpdateData();
     });
     message.writeUInt8(playerSnapshot.enemies.length);
-    playerSnapshot.enemies.forEach(async (enemy) => {
+    playerSnapshot.enemies.forEach((enemy) => {
       const entityBufferWriter = new LivingEntityBufferWriter(enemy, message);
       entityBufferWriter.writePositionUpdateData();
     });
-    if (engine.DEV_MODE && engine.LATENCY > 0) {
-      const latency = () => new Promise((resolve) => setTimeout(resolve, 300));
-      await latency();
-    }
+    await simulateLatency();
     if (this.tcpOnly) {
       socket.sendTcpMessage(message.buffer, this.id);
     } else {
       socket.sendUdpMessage(message.buffer, this.ip, this.port);
     }
+  }
+
+  async sendEvents(playerSnapshot: Snapshot) {
+    const events: Array<Buffer> = [];
+    playerSnapshot.players.forEach((player) => {
+      if (player.events.length === 0) return;
+      const eventsData = Buffer.concat(player.events);
+      // Id + events length + events data
+      const bufferSize = network.INT16_SIZE + network.INT8_SIZE;
+      const livingEntityBuffer = new LivingEntityBufferWriter(
+        player,
+        new NetworkMessage(Buffer.alloc(bufferSize)),
+      );
+      livingEntityBuffer.writeEvents(eventsData, player.events.length);
+      events.push(livingEntityBuffer.message.buffer);
+    });
+    playerSnapshot.enemies.forEach((enemy) => {
+      if (enemy.events.length === 0) return;
+      const eventsData = Buffer.concat(enemy.events);
+      // Id + events length + events data
+      const bufferSize = network.INT16_SIZE + network.INT8_SIZE;
+      const livingEntityBuffer = new LivingEntityBufferWriter(
+        enemy,
+        new NetworkMessage(Buffer.alloc(bufferSize)),
+      );
+      livingEntityBuffer.writeEvents(eventsData, enemy.events.length);
+      events.push(livingEntityBuffer.message.buffer);
+      livingEntityBuffer.message.resetOffset();
+    });
+    if (events.length === 0) return;
+    const eventsData = Buffer.concat(events);
+    // We don't need to add the eventsData's length.
+    // That will be added when we concat.
+    const bufferSize =
+      network.INT8_SIZE + network.DOUBLE_SIZE + network.INT16_SIZE;
+    const message = new NetworkMessage(Buffer.alloc(bufferSize));
+    message.writeUInt8(networkMessage.EVENTS);
+    // TODO: We could be more efficient and send only the last 5 or 6 digits of the timestamp
+    message.writeDouble(playerSnapshot.timestamp);
+    message.writeUInt16(events.length);
+    message.appendBuffer(eventsData);
+    await simulateLatency();
+    socket.sendTcpMessage(message.buffer, this.id);
   }
 
   async disconnect() {

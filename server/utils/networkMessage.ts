@@ -108,6 +108,11 @@ export default class NetworkMessage {
     return value;
   }
 
+  appendBuffer(anotherBuffer: Buffer) {
+    this.buffer = Buffer.concat([this.buffer, anotherBuffer]);
+    this.offset += anotherBuffer.length;
+  }
+
   resetOffset() {
     this.offset = 0;
   }

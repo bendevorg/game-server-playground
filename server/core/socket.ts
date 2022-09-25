@@ -35,7 +35,7 @@ class Socket {
   sendTcpMessage(buffer: Buffer, clientId: number) {
     return new Promise<void>((resolve, reject) => {
       const socket = this.tcpClientToSocket[clientId];
-      if (!socket) return reject();
+      if (!socket) return resolve();
       socket.write(buffer);
       return resolve();
     });

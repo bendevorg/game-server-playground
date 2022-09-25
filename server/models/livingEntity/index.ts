@@ -8,10 +8,12 @@ import {
   GridPosition,
   SnapshotLivingEntity,
 } from '~/interfaces';
-import { map as constants, game, locks } from '~/constants';
+import { map as constants, game, locks, network, events } from '~/constants';
 import lock from '~/utils/lock';
 import isInRange from '~/utils/isInRange';
 import randomIntFromInterval from '~/utils/randomIntFromInterval';
+import NetworkMessage from '~/utils/networkMessage';
+import LivingEntityBufferWriter from '~/utils/livingEntityBufferWriter';
 
 export enum State {
   STAND_BY = 0,
@@ -44,6 +46,7 @@ export default class LivingEntity {
   timeForNextAttack: number;
   mapId: string;
   map?: Map;
+  events: Array<Buffer>;
 
   constructor({
     id,
@@ -77,6 +80,7 @@ export default class LivingEntity {
     this.lastMovement = now;
     this.lastAttackStart = now;
     this.timeForNextAttack = now;
+    this.events = [];
     this.updateValues();
   }
 
@@ -133,16 +137,23 @@ export default class LivingEntity {
   }
 
   retrieveSnapshotData() {
-    return new Promise<SnapshotLivingEntity>((resolve) => {
+    return new Promise<SnapshotLivingEntity>(async (resolve) => {
       lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
-        resolve({
-          id: this.id,
-          position: this.position,
-          health: this.health,
-          maxHealth: this.maxHealth,
-          speed: this.speed,
-          attackRange: this.attackRange,
+        lock.acquire(locks.ENTITY_EVENTS + this.id, (done) => {
+          resolve({
+            id: this.id,
+            position: this.position,
+            level: this.level,
+            experience: this.experience,
+            health: this.health,
+            maxHealth: this.maxHealth,
+            speed: this.speed,
+            attackRange: this.attackRange,
+            events: this.events,
+          });
+          done();
         });
+        this.clearEvents();
         done();
       });
     });
@@ -705,16 +716,35 @@ export default class LivingEntity {
   }
 
   async takeHit(damage: number, attacker: LivingEntity) {
+    if (this.health <= 0) return;
     await this.addHealth(-damage);
     if (this.health <= 0) {
       this.die(attacker);
     }
+    const event = new LivingEntityBufferWriter(
+      this,
+      new NetworkMessage(Buffer.alloc(network.BUFFER_HIT_EVENT_SIZE)),
+    );
+    event.writeHitEvent(damage);
+    // We don't need to wait to write the event
+    lock.acquire(locks.ENTITY_EVENTS + this.id, (done) => {
+      this.events.push(event.message.buffer);
+      done();
+    });
   }
 
   async die(attacker: LivingEntity) {
+    if (this.state === State.DEAD) return;
     attacker.addExperience(this.experienceReward);
     lock.acquire(locks.ENTITY_STATE + this.id, (done) => {
       this.state = State.DEAD;
+      done();
+    });
+  }
+
+  async clearEvents() {
+    await lock.acquire(locks.ENTITY_EVENTS + this.id, (done) => {
+      this.events = [];
       done();
     });
   }
