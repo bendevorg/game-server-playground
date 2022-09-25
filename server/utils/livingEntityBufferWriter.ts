@@ -52,6 +52,7 @@ export default class LivingEntityBufferWriter {
   writeHitEvent(value: number) {
     this.message.writeUInt8(events.HIT_EVENT);
     this.message.writeInt16(value);
+    this.message.writeInt16(this.entity.health);
   }
 
   writeFullData() {

@@ -11,7 +11,7 @@ export default {
   BUFFER_ENEMY_SIZE: 15,
   // ID (Int 16) + Position x (Int 16) + Position Z (Int 16)
   BUFFER_POSITION_SIZE: 6,
-  // Event type (INT 8) + Value (Int 16)
-  BUFFER_HIT_EVENT_SIZE: 3,
+  // Event type (INT 8) + Value (Int 16) + New Health (Int 16)
+  BUFFER_HIT_EVENT_SIZE: 5,
   TIME_TO_TIMEOUT: 10000,
 };

@@ -240,12 +240,59 @@ export default class Player extends LivingEntity {
     };
   }
 
+  async visibleEntitiesChanged(playerSnapshot: Snapshot) {
+    let changed = false;
+    const lastSnapshotIds: Set<number> = new Set<number>();
+    await lock.acquire(locks.ENTITY_LAST_SNAPSHOT, (done) => {
+      if (!this.lastGeneratedSnapshot) {
+        changed = true;
+        done();
+        return;
+      }
+      if (
+        this.lastGeneratedSnapshot.players.length !==
+          playerSnapshot.players.length ||
+        this.lastGeneratedSnapshot.enemies.length !==
+          playerSnapshot.enemies.length
+      ) {
+        changed = true;
+        done();
+        return;
+      }
+      this.lastGeneratedSnapshot.players.forEach((player) =>
+        lastSnapshotIds.add(player.id),
+      );
+      this.lastGeneratedSnapshot.enemies.forEach((enemy) =>
+        lastSnapshotIds.add(enemy.id),
+      );
+      done();
+    });
+    if (changed) return changed;
+    for (let i = 0; i < playerSnapshot.players.length; i++) {
+      if (!lastSnapshotIds.has(playerSnapshot.players[i].id)) {
+        return true;
+      }
+      lastSnapshotIds.delete(playerSnapshot.players[i].id);
+    }
+    for (let i = 0; i < playerSnapshot.enemies.length; i++) {
+      if (!lastSnapshotIds.has(playerSnapshot.enemies[i].id)) {
+        return true;
+      }
+      lastSnapshotIds.delete(playerSnapshot.enemies[i].id);
+    }
+    // If there is still something inside the set it means that we have an entity
+    // before that doesn't exist anymore
+    return lastSnapshotIds.entries.length > 0;
+  }
+
   async sendUpdates(snapshot: Snapshot) {
     const playerSnapshot = await this.generateSnapshotForPlayer(snapshot);
     this.sendPositionSnapshot(playerSnapshot);
     this.sendEvents(playerSnapshot);
     // TODO: Only send the full snapshot if new entities spawned.
-    this.sendFullSnapshot(playerSnapshot);
+    if (await this.visibleEntitiesChanged(playerSnapshot)) {
+      this.sendFullSnapshot(playerSnapshot);
+    }
     lock.acquire(locks.ENTITY_LAST_SNAPSHOT, (done) => {
       this.lastGeneratedSnapshot = playerSnapshot;
       done();
