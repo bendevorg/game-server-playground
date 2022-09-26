@@ -135,6 +135,20 @@ export default class Player extends LivingEntity {
     };
   }
 
+  async addExperience(experience: number) {
+    await super.addExperience(experience);
+    const event = new LivingEntityBufferWriter(
+      this,
+      new NetworkMessage(Buffer.alloc(network.BUFFER_HIT_EVENT_SIZE)),
+    );
+    event.writeExperienceEvent(experience);
+    // We don't need to wait to write the event
+    lock.acquire(locks.ENTITY_EVENTS + this.id, (done) => {
+      this.events.push(event.message.buffer);
+      done();
+    });
+  }
+
   async update() {
     await super.update();
   }

@@ -55,6 +55,12 @@ export default class LivingEntityBufferWriter {
     this.message.writeInt16(this.entity.health);
   }
 
+  writeExperienceEvent(value: number) {
+    this.message.writeUInt8(events.EXPERIENCE_EVENT);
+    this.message.writeInt16(value);
+    this.message.writeInt16(this.entity.experience);
+  }
+
   writeFullData() {
     this.writePositionUpdateData();
     this.writeLevel();
