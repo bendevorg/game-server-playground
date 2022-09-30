@@ -2,6 +2,7 @@ import { Map, Player, Enemy } from '~/models';
 import NetworkMessage from '~/utils/networkMessage';
 import { actions } from '~/constants';
 import { Position } from '~/interfaces';
+import { State } from '~/models/livingEntity';
 
 export default (input: Buffer, map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
@@ -18,6 +19,8 @@ export default (input: Buffer, map: Map) => {
         break;
       case actions.NEW_TARGET_POSITION:
         console.log('New target position');
+        // We don't allow the player to move if they are in the before hit animation
+        if (player.state === State.PREPARING_ATTACK) break;
         const targetX = message.popInt16();
         const targetZ = message.popInt16();
         const currentX = message.popInt16();
@@ -53,6 +56,7 @@ export default (input: Buffer, map: Map) => {
         // Between this timestamp and the future tick timestamp
         // TODO: player.move already sets last movement, do we really need this here?
         player.setLastMovement(timestamp);
+        player.setTarget(undefined);
         break;
       case actions.ATTACK:
         console.log('Attack');
@@ -63,7 +67,8 @@ export default (input: Buffer, map: Map) => {
         }
         // We should apply the movement between last and this tick before changing to attack
         await player.move(timestamp);
-        player.setupAttack(target, timestamp);
+        player.setTarget(target);
+        player.attack(timestamp);
         break;
       default:
         return reject('Invalid action');

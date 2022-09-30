@@ -18,8 +18,8 @@ import LivingEntityBufferWriter from '~/utils/livingEntityBufferWriter';
 export enum State {
   STAND_BY = 0,
   MOVING = 1,
-  MOVING_TO_ATTACK = 2,
-  ATTACKING = 3,
+  PREPARING_ATTACK = 2,
+  WAITING_FOR_NEXT_ATTACK = 3,
   DEAD = 4,
 }
 
@@ -42,7 +42,8 @@ export default class LivingEntity {
   target?: LivingEntity;
   lastUpdate: number;
   lastMovement: number;
-  lastAttackStart: number;
+  lastAttack: number;
+  timeForAttackToHit: number;
   timeForNextAttack: number;
   mapId: string;
   map?: Map;
@@ -78,7 +79,10 @@ export default class LivingEntity {
     const now = new Date().getTime();
     this.lastUpdate = now;
     this.lastMovement = now;
-    this.lastAttackStart = now;
+    // This time holds the time when the user finished the attack, right after dealing damage
+    // It does not start when the user started the attack or after the cooldown ended
+    this.lastAttack = now;
+    this.timeForAttackToHit = now;
     this.timeForNextAttack = now;
     this.events = [];
     this.updateValues();
@@ -102,11 +106,18 @@ export default class LivingEntity {
     this.lastMovement = timestamp || new Date().getTime();
   }
 
-  setLastAttackStart(timestamp?: number) {
-    this.lastAttackStart = timestamp || new Date().getTime();
+  setLastAttack(timestamp?: number) {
+    this.lastAttack = timestamp || new Date().getTime();
+  }
+
+  setTimeForAttackToHit(timestamp?: number) {
+    // TODO: Change 0.25 to be a constant from somewhere
+    this.timeForAttackToHit =
+      timestamp || new Date().getTime() + (0.25 / this.attackSpeed) * 1000;
   }
 
   setTimeForNextAttack(timestamp?: number) {
+    // TODO: Change 1 to be a constant from somewhere
     this.timeForNextAttack =
       timestamp || new Date().getTime() + (1 / this.attackSpeed) * 1000;
   }
@@ -126,6 +137,13 @@ export default class LivingEntity {
   async addExperience(experience: number) {
     await lock.acquire(locks.ENTITY_EXPERIENCE + this, (done) => {
       this.experience += experience;
+      done();
+    });
+  }
+
+  async setTarget(target?: LivingEntity) {
+    await lock.acquire(locks.ENTITY_TARGET + this.id, (done) => {
+      this.target = target;
       done();
     });
   }
@@ -168,15 +186,20 @@ export default class LivingEntity {
       }
       await lock.acquire(locks.ENTITY_TARGET + this.id, (done) => {
         this.previousState = this.state;
-        if (this.target) {
-          if (
-            !isInRange(this.position, this.target.position, this.attackRange)
-          ) {
-            this.state = State.MOVING_TO_ATTACK;
+        const now = new Date().getTime();
+        // if (this.inBeforeHitAnimation(now)) {
+        //   console.log('Before hit animation');
+        // }
+        // Attacking
+        if (this.awaitingForAttackCooldown(now)) {
+          // We are in the attack animation
+          if (this.inBeforeHitAnimation(now)) {
+            // console.log('Ue');
+            this.state = State.PREPARING_ATTACK;
             done();
             return;
           }
-          this.state = State.ATTACKING;
+          this.state = State.WAITING_FOR_NEXT_ATTACK;
           done();
           return;
         }
@@ -565,8 +588,12 @@ export default class LivingEntity {
   // If the parameter is not send Date.now() will be used
   async move(currentTimestamp?: number) {
     await lock.acquire(locks.ENTITY_PATH + this.id, async (done) => {
-      await lock.acquire(locks.ENTITY_POSITION + this.id, (done) => {
-        if (!this.path || this.path.waypoints.length === 0) {
+      await lock.acquire(locks.ENTITY_POSITION + this.id, async (done) => {
+        if (
+          !this.path ||
+          this.path.waypoints.length === 0 ||
+          this.state === State.PREPARING_ATTACK
+        ) {
           return done();
         }
         let distanceX =
@@ -636,7 +663,21 @@ export default class LivingEntity {
     this.setLastMovement(timestamp);
   }
 
-  async attack() {
+  awaitingForAttackCooldown(timestamp?: number) {
+    const now = timestamp || new Date().getTime();
+    return this.timeForNextAttack > now;
+  }
+
+  attackedButWaitingForAttackCooldown() {
+    return this.timeForAttackToHit <= this.lastAttack;
+  }
+
+  inBeforeHitAnimation(timestamp?: number) {
+    const now = timestamp || new Date().getTime();
+    return this.timeForAttackToHit > now;
+  }
+
+  async attack(timestamp?: number) {
     await lock.acquire(locks.ENTITY_TARGET + this.id, async (done) => {
       if (!this.target) {
         done();
@@ -650,6 +691,35 @@ export default class LivingEntity {
         done();
         return;
       }
+
+      const now = new Date().getTime();
+      // The attack has started and we are either waiting for the attack to hit
+      // Or for the next attack to start
+      if (this.awaitingForAttackCooldown(now)) {
+        // We are in the attack animation OR
+        // We have damaged the target for this attack already and
+        // We are just awaiting for the cooldown.
+        if (
+          this.inBeforeHitAnimation(now) ||
+          this.attackedButWaitingForAttackCooldown()
+        ) {
+          done();
+          return;
+        }
+        // If we reach this point it means that we are ready to hit the target
+        // And wait for the rest of the animation
+        // From now on the character can move
+        const damage = await this.calculateDamage();
+        this.setLastAttack();
+        await this.target.takeHit(damage, this);
+        done();
+        return;
+      }
+
+      // Starting a new attack
+
+      // We are ready to start attacking, let's check if we can
+      // We check the vision range
       if (
         !isInRange(this.position, this.target.position, game.VISION_DISTANCE)
       ) {
@@ -657,23 +727,22 @@ export default class LivingEntity {
         done();
         return;
       }
-      const now = new Date().getTime();
+
+      // Then we check the attack range and line of sight
       if (
         !isInRange(this.position, this.target.position, this.attackRange) ||
-        this.timeForNextAttack > now ||
         !this.isLineOfSightToTargetClear()
       ) {
         done();
         return;
       }
       // If we are attacking we can't have a path
-      // await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
-      //   this.path = undefined;
-      //   done();
-      // });
-      const damage = await this.calculateDamage();
-      await this.target.takeHit(damage, this);
-      this.setTimeForNextAttack();
+      await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
+        this.path = undefined;
+        done();
+      });
+      this.setTimeForNextAttack(timestamp);
+      this.setTimeForAttackToHit(timestamp);
       done();
     });
   }
@@ -687,28 +756,6 @@ export default class LivingEntity {
       pointB,
     };
     return this.isLineOfSightClear(line);
-  }
-
-  async setupAttack(target: LivingEntity, timestamp?: number) {
-    if (
-      !target ||
-      (this.target && this.target.id === target.id) ||
-      target.id === this.id ||
-      (!Enemy.getActive(target.id) && !Player.getActive(target.id))
-    )
-      return;
-    await lock.acquire(locks.ENTITY_TARGET + this.id, async (done) => {
-      if (!isInRange(this.position, target.position, game.VISION_DISTANCE)) {
-        return;
-      }
-      this.target = target;
-      // await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
-      //   this.path = undefined;
-      //   done();
-      // });
-      done();
-    });
-    this.setLastAttackStart(timestamp);
   }
 
   async calculateDamage() {

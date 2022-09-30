@@ -60,7 +60,7 @@ export default class Enemy extends LivingEntity {
     // if (!this.target && players.length > 0) {
     //   const player = Player.getActive(players[0]);
     //   if (player) {
-    //     await this.setupAttack(player);
+    //     await this.setTarget(player);
     //     return;
     //   }
     // }
@@ -85,7 +85,7 @@ export default class Enemy extends LivingEntity {
     // We don't wait for this because this calculates a new path
     // And that takes a while, we handle things with locks and once that is done
     // We will start moving
-    this.moveToRandom();
+    // this.moveToRandom();
   }
 
   async moveToRandom() {
