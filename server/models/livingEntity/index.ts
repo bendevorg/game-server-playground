@@ -743,6 +743,16 @@ export default class LivingEntity {
       });
       this.setTimeForNextAttack(timestamp);
       this.setTimeForAttackToHit(timestamp);
+      const event = new LivingEntityBufferWriter(
+        this,
+        new NetworkMessage(Buffer.alloc(network.BUFFER_ATTACK_EVENT_SIZE)),
+      );
+      event.writeAttackEvent(this.target);
+      // We don't need to wait to write the event
+      lock.acquire(locks.ENTITY_EVENTS + this.id, (done) => {
+        this.events.push(event.message.buffer);
+        done();
+      });
       done();
     });
   }

@@ -13,5 +13,7 @@ export default {
   BUFFER_POSITION_SIZE: 6,
   // Event type (INT 8) + Value (Int 16) + New Health (Int 16)
   BUFFER_HIT_EVENT_SIZE: 5,
+  // Event type (INT 8) + Target Id (Int 16)
+  BUFFER_ATTACK_EVENT_SIZE: 3,
   TIME_TO_TIMEOUT: 10000,
 };

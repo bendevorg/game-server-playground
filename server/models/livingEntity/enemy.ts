@@ -1,4 +1,4 @@
-import { LivingEntity, Player } from '../';
+import { LivingEntity } from '../';
 import { State } from '../livingEntity';
 import lock from '~/utils/lock';
 import randomIntFromInterval from '~/utils/randomIntFromInterval';
@@ -12,8 +12,8 @@ export default class Enemy extends LivingEntity {
   calculatingNextPath = false;
   nextTimeToMove = 0;
   // TODO: This should be a per enemy configuration
-  minTimeBetweenRandomMovements = 1500;
-  maxTimeBetweenRandomMovements = 3000;
+  minTimeBetweenRandomMovements = 2000;
+  maxTimeBetweenRandomMovements = 4000;
 
   lastTargetCalculatedPosition: Position = {
     x: -9999,

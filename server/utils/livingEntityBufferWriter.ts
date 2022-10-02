@@ -1,5 +1,6 @@
 import { events } from '~/constants';
 import { SnapshotLivingEntity } from '~/interfaces';
+import { LivingEntity } from '~/models';
 import NetworkMessage from '~/utils/networkMessage';
 
 export default class LivingEntityBufferWriter {
@@ -47,6 +48,11 @@ export default class LivingEntityBufferWriter {
 
   writeAttackRange() {
     this.message.writeUInt8(this.entity.attackRange);
+  }
+
+  writeAttackEvent(target: LivingEntity) {
+    this.message.writeUInt8(events.ATTACK_EVENT);
+    this.message.writeUInt16(target.id);
   }
 
   writeHitEvent(value: number) {
