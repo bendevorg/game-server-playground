@@ -48,6 +48,7 @@ export default class Player extends LivingEntity {
     super({
       id,
       position,
+      halfColliderExtent: 0.5,
       level,
       experience,
       health,

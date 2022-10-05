@@ -85,7 +85,7 @@ export default class Enemy extends LivingEntity {
     // We don't wait for this because this calculates a new path
     // And that takes a while, we handle things with locks and once that is done
     // We will start moving
-    // this.moveToRandom();
+    this.moveToRandom();
   }
 
   async moveToRandom() {
@@ -123,7 +123,13 @@ export default class Enemy extends LivingEntity {
         return;
       }
       if (
-        isInRange(this.position, this.target.position, this.attackRange) &&
+        isInRange(
+          this.position,
+          this.target.position,
+          this.attackRange +
+            this.halfColliderExtent +
+            this.target.halfColliderExtent,
+        ) &&
         super.isLineOfSightToTargetClear()
       ) {
         done();

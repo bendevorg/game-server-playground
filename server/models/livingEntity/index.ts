@@ -29,6 +29,7 @@ export default class LivingEntity {
   id: number;
   position: Position;
   path?: Path;
+  halfColliderExtent: number;
   level: number;
   experience: number;
   health: number;
@@ -64,6 +65,8 @@ export default class LivingEntity {
   }: LivingEntityConstructor) {
     this.id = id;
     this.position = position;
+    // TODO: This will be individual per entity at some point
+    this.halfColliderExtent = 0.5;
     this.level = level;
     this.experience = experience;
     this.health = health;
@@ -187,14 +190,10 @@ export default class LivingEntity {
       await lock.acquire(locks.ENTITY_TARGET + this.id, (done) => {
         this.previousState = this.state;
         const now = new Date().getTime();
-        // if (this.inBeforeHitAnimation(now)) {
-        //   console.log('Before hit animation');
-        // }
         // Attacking
         if (this.awaitingForAttackCooldown(now)) {
           // We are in the attack animation
           if (this.inBeforeHitAnimation(now)) {
-            // console.log('Ue');
             this.state = State.PREPARING_ATTACK;
             done();
             return;
@@ -517,6 +516,7 @@ export default class LivingEntity {
         this.path = path;
         done();
       });
+      this.addPathEvent([...waypoints]);
       return resolve();
     });
   }
@@ -663,6 +663,25 @@ export default class LivingEntity {
     this.setLastMovement(timestamp);
   }
 
+  async addPathEvent(waypoints: Array<Position>) {
+    const event = new LivingEntityBufferWriter(
+      this,
+      // Amount of waypoints
+      new NetworkMessage(
+        Buffer.alloc(
+          network.INT8_SIZE +
+            network.INT8_SIZE +
+            waypoints.length * network.WAYPOINT_SIZE,
+        ),
+      ),
+    );
+    event.writePathEvent(waypoints);
+    await lock.acquire(locks.ENTITY_EVENTS + this.id, (done) => {
+      this.events.push(event.message.buffer);
+      done();
+    });
+  }
+
   awaitingForAttackCooldown(timestamp?: number) {
     const now = timestamp || new Date().getTime();
     return this.timeForNextAttack > now;
@@ -730,7 +749,13 @@ export default class LivingEntity {
 
       // Then we check the attack range and line of sight
       if (
-        !isInRange(this.position, this.target.position, this.attackRange) ||
+        !isInRange(
+          this.position,
+          this.target.position,
+          this.attackRange +
+            this.halfColliderExtent +
+            this.target.halfColliderExtent,
+        ) ||
         !this.isLineOfSightToTargetClear()
       ) {
         done();

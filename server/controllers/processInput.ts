@@ -3,6 +3,7 @@ import NetworkMessage from '~/utils/networkMessage';
 import { actions } from '~/constants';
 import { Position } from '~/interfaces';
 import { State } from '~/models/livingEntity';
+import transformShortToFloat from '~/utils/transformShortToFloat';
 
 export default (input: Buffer, map: Map) => {
   return new Promise<void>(async (resolve, reject) => {
@@ -25,17 +26,15 @@ export default (input: Buffer, map: Map) => {
         const targetZ = message.popInt16();
         const currentX = message.popInt16();
         const currentZ = message.popInt16();
-        // The position is a short where the last 2 numbers are decimals
-        // Multiplying by 1.0 so it turns into a float
         const targetPosition: Position = {
-          x: (targetX * 1.0) / 100,
+          x: transformShortToFloat(targetX),
           y: 0,
-          z: (targetZ * 1.0) / 100,
+          z: transformShortToFloat(targetZ),
         };
         const currentPosition: Position = {
-          x: (currentX * 1.0) / 100,
+          x: transformShortToFloat(currentX),
           y: 0,
-          z: (currentZ * 1.0) / 100,
+          z: transformShortToFloat(currentZ),
         };
         // TODO: We should check if the movement is within the vision range
         const accepted = await player.attemptToSyncPosition(
@@ -65,8 +64,22 @@ export default (input: Buffer, map: Map) => {
         if (!target) {
           return reject('Invalid target');
         }
-        // We should apply the movement between last and this tick before changing to attack
-        await player.move(timestamp);
+        const attackOriginX = message.popInt16();
+        const attackOriginZ = message.popInt16();
+        const attackOriginPosition: Position = {
+          x: transformShortToFloat(attackOriginX),
+          y: 0,
+          z: transformShortToFloat(attackOriginZ),
+        };
+        // TODO: We should check if the movement is within the vision range
+        const acceptedSync = await player.attemptToSyncPosition(
+          attackOriginPosition,
+          timestamp,
+        );
+        if (!acceptedSync) {
+          // We should apply the movement between last and this tick before changing to attack
+          await player.move(timestamp);
+        }
         player.setTarget(target);
         player.attack(timestamp);
         break;

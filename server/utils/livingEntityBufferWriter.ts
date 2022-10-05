@@ -1,5 +1,5 @@
 import { events } from '~/constants';
-import { SnapshotLivingEntity } from '~/interfaces';
+import { Position, SnapshotLivingEntity } from '~/interfaces';
 import { LivingEntity } from '~/models';
 import NetworkMessage from '~/utils/networkMessage';
 
@@ -47,7 +47,16 @@ export default class LivingEntityBufferWriter {
   }
 
   writeAttackRange() {
-    this.message.writeUInt8(this.entity.attackRange);
+    this.message.writeUInt16(this.entity.attackRange * 100);
+  }
+
+  writePathEvent(waypoints: Array<Position>) {
+    this.message.writeUInt8(events.NEW_PATH_EVENT);
+    this.message.writeUInt8(waypoints.length);
+    waypoints.forEach((waypoint) => {
+      this.message.writeInt16(waypoint.x * 100);
+      this.message.writeInt16(waypoint.z * 100);
+    });
   }
 
   writeAttackEvent(target: LivingEntity) {
