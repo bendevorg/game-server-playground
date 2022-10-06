@@ -36,6 +36,7 @@ export default (input: Buffer, map: Map) => {
           y: 0,
           z: transformShortToFloat(currentZ),
         };
+        const range = transformShortToFloat(message.popInt16());
         // TODO: We should check if the movement is within the vision range
         const accepted = await player.attemptToSyncPosition(
           currentPosition,
@@ -49,7 +50,7 @@ export default (input: Buffer, map: Map) => {
 
         // We don't wait for this but living entity internally uses locks to
         // guarantee that we won't have collisions when accessing things
-        player.calculatePath(targetPosition);
+        player.calculatePath(targetPosition, range);
         // This last movement is assigned here so in the next server tick
         // After the path is calculated we will move taking into account the time
         // Between this timestamp and the future tick timestamp
@@ -58,7 +59,7 @@ export default (input: Buffer, map: Map) => {
         player.setTarget(undefined);
         break;
       case actions.ATTACK:
-        console.log('Attack');
+        console.log('Attack action');
         const targetId = message.popUInt16();
         const target = Enemy.getActive(targetId);
         if (!target) {
@@ -80,8 +81,7 @@ export default (input: Buffer, map: Map) => {
           // We should apply the movement between last and this tick before changing to attack
           await player.move(timestamp);
         }
-        player.setTarget(target);
-        player.attack(timestamp);
+        player.setupAttack(target, timestamp);
         break;
       default:
         return reject('Invalid action');

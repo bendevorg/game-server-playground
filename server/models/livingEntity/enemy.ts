@@ -130,7 +130,7 @@ export default class Enemy extends LivingEntity {
             this.halfColliderExtent +
             this.target.halfColliderExtent,
         ) &&
-        super.isLineOfSightToTargetClear()
+        super.isLineOfSightToTargetClear(this.target)
       ) {
         done();
         return;

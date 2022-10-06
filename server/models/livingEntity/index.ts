@@ -116,13 +116,13 @@ export default class LivingEntity {
   setTimeForAttackToHit(timestamp?: number) {
     // TODO: Change 0.25 to be a constant from somewhere
     this.timeForAttackToHit =
-      timestamp || new Date().getTime() + (0.25 / this.attackSpeed) * 1000;
+      (timestamp || new Date().getTime()) + (0.25 / this.attackSpeed) * 1000;
   }
 
   setTimeForNextAttack(timestamp?: number) {
     // TODO: Change 1 to be a constant from somewhere
     this.timeForNextAttack =
-      timestamp || new Date().getTime() + (1 / this.attackSpeed) * 1000;
+      (timestamp || new Date().getTime()) + (1 / this.attackSpeed) * 1000;
   }
 
   async addHealth(health: number) {
@@ -144,6 +144,13 @@ export default class LivingEntity {
     });
   }
 
+  async setPath(target?: LivingEntity) {
+    await lock.acquire(locks.ENTITY_TARGET + this.id, (done) => {
+      this.target = target;
+      done();
+    });
+  }
+
   async setTarget(target?: LivingEntity) {
     await lock.acquire(locks.ENTITY_TARGET + this.id, (done) => {
       this.target = target;
@@ -153,8 +160,8 @@ export default class LivingEntity {
 
   async update() {
     this.updateState();
-    await this.move();
     await this.attack();
+    await this.move();
   }
 
   retrieveSnapshotData() {
@@ -339,7 +346,7 @@ export default class LivingEntity {
     return start;
   }
 
-  calculatePath(target: Position) {
+  calculatePath(target: Position, range: number = 0) {
     return new Promise<void>(async (resolve, reject) => {
       if (!this.map) {
         return reject('Map not set for entity');
@@ -505,6 +512,7 @@ export default class LivingEntity {
         }
       }
       // We change the nodes array that we pass as a parameter which is a reference
+      nodes = this.adjustPathForRange(nodes, range);
       nodes = this.simplifyPath(nodes);
       const waypoints = this.calculateWaypoints(nodes);
       const path: Path = {
@@ -519,6 +527,63 @@ export default class LivingEntity {
       this.addPathEvent([...waypoints]);
       return resolve();
     });
+  }
+
+  // If we receive a range we should try to find the first path that lands
+  // Within the range with line of sight to the goal
+  adjustPathForRange(nodes: Array<Node>, range: number): Array<Node> {
+    if (range <= 0 || !this.map) return nodes;
+    // For straight paths we just need to change the end to be the first point in the range
+    if (nodes.length === 2) {
+      const distanceX = nodes[0].position.x - nodes[1].position.x;
+      const distanceZ = nodes[0].position.z - nodes[1].position.z;
+      const magnitude = Math.sqrt(
+        distanceX * distanceX + distanceZ * distanceZ,
+      );
+      const directionX = distanceX / magnitude;
+      const directionZ = distanceZ / magnitude;
+      const newTargetPosition = {
+        x: nodes[0].position.x - directionX * range,
+        y: nodes[0].position.y,
+        z: nodes[0].position.z - directionZ * range,
+      };
+      const newTargetNode = this.map.worldPositionToNode(newTargetPosition);
+      // This should never happen
+      if (newTargetNode.type !== constants.GROUND_TILE) {
+        return nodes;
+      }
+      nodes[0] = newTargetNode;
+      return nodes;
+    }
+    const target = nodes[0];
+    // Let's remove all nodes until we are within range and with line of sight
+    let newTargetIndex = 0;
+    while (newTargetIndex < nodes.length - 2) {
+      const index = newTargetIndex + 1;
+      // If next node is not within range we stop searching
+      if (
+        Math.abs(target.position.x - nodes[index].position.x) > range ||
+        Math.abs(target.position.z - nodes[index].position.z) > range
+      ) {
+        break;
+      }
+      // If next node does not have line of sight we stop search
+      const line: GridLine = {
+        pointA: target.gridPosition,
+        pointB: nodes[index].gridPosition,
+      };
+      if (this.map.isLineCrossingAnObject(line)) {
+        break;
+      }
+      // If not we can remove the previous node
+      newTargetIndex = index;
+    }
+    if (newTargetIndex === 0) return nodes;
+    const reducedNodesForRange: Node[] = [];
+    for (let i = newTargetIndex; i < nodes.length; i++) {
+      reducedNodesForRange.push(nodes[i]);
+    }
+    return reducedNodesForRange;
   }
 
   simplifyPath(nodes: Array<Node>): Array<Node> {
@@ -696,7 +761,7 @@ export default class LivingEntity {
     return this.timeForAttackToHit > now;
   }
 
-  async attack(timestamp?: number) {
+  async attack() {
     await lock.acquire(locks.ENTITY_TARGET + this.id, async (done) => {
       if (!this.target) {
         done();
@@ -710,62 +775,76 @@ export default class LivingEntity {
         done();
         return;
       }
-
       const now = new Date().getTime();
-      // The attack has started and we are either waiting for the attack to hit
-      // Or for the next attack to start
-      if (this.awaitingForAttackCooldown(now)) {
-        // We are in the attack animation OR
-        // We have damaged the target for this attack already and
-        // We are just awaiting for the cooldown.
-        if (
-          this.inBeforeHitAnimation(now) ||
-          this.attackedButWaitingForAttackCooldown()
-        ) {
-          done();
-          return;
-        }
-        // If we reach this point it means that we are ready to hit the target
-        // And wait for the rest of the animation
-        // From now on the character can move
-        const damage = await this.calculateDamage();
-        this.setLastAttack();
-        await this.target.takeHit(damage, this);
+      // If we are not in the middle of an attack there is nothing to do
+      if (!this.awaitingForAttackCooldown(now)) {
         done();
         return;
       }
+      // If we have attacked but we are waiting for the hitting time
+      if (this.inBeforeHitAnimation(now)) {
+        done();
+        return;
+      }
+      // If we are withing the hitting time but we have attacked already
+      if (this.attackedButWaitingForAttackCooldown()) {
+        done();
+        return;
+      }
+      // If we reach this point it means that we are ready to hit the target
+      // And wait for the rest of the animation
+      // From now on the character can move
+      const damage = await this.calculateDamage();
+      this.setLastAttack();
+      await this.target.takeHit(damage, this);
+      done();
+      return;
+    });
+  }
 
-      // Starting a new attack
-
-      // We are ready to start attacking, let's check if we can
-      // We check the vision range
-      if (
-        !isInRange(this.position, this.target.position, game.VISION_DISTANCE)
-      ) {
+  async setupAttack(target: LivingEntity, timestamp?: number) {
+    // If we are attacking we can't have a path
+    await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
+      this.path = undefined;
+      done();
+    });
+    await lock.acquire(locks.ENTITY_TARGET + this.id, async (done) => {
+      if (!target) {
+        done();
+        return;
+      }
+      if (!Enemy.getActive(target.id) && !Player.getActive(target.id)) {
         this.target = undefined;
         done();
         return;
       }
-
-      // Then we check the attack range and line of sight
+      // Starting a new attack
+      // We are ready to start attacking, let's check if we can
+      // We check the vision range
+      if (!isInRange(this.position, target.position, game.VISION_DISTANCE)) {
+        this.target = undefined;
+        done();
+        return;
+      }
+      // Then we check the attack range
       if (
         !isInRange(
           this.position,
-          this.target.position,
+          target.position,
           this.attackRange +
             this.halfColliderExtent +
-            this.target.halfColliderExtent,
-        ) ||
-        !this.isLineOfSightToTargetClear()
+            target.halfColliderExtent,
+        )
       ) {
         done();
         return;
       }
-      // If we are attacking we can't have a path
-      await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
-        this.path = undefined;
+      // Then we check the line of sight
+      if (!this.isLineOfSightToTargetClear(target)) {
         done();
-      });
+        return;
+      }
+      this.target = target;
       this.setTimeForNextAttack(timestamp);
       this.setTimeForAttackToHit(timestamp);
       const event = new LivingEntityBufferWriter(
@@ -782,10 +861,10 @@ export default class LivingEntity {
     });
   }
 
-  isLineOfSightToTargetClear() {
-    if (!this.map || !this.target) return false;
+  isLineOfSightToTargetClear(target: LivingEntity) {
+    if (!this.map || !target) return false;
     const pointA = this.map.worldPositionToGridPosition(this.position);
-    const pointB = this.map.worldPositionToGridPosition(this.target.position);
+    const pointB = this.map.worldPositionToGridPosition(target.position);
     const line: GridLine = {
       pointA,
       pointB,
