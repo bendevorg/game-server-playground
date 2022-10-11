@@ -16,6 +16,8 @@ export default {
   // Event type (INT 8) + Target Id (Int 16)
   BUFFER_ATTACK_EVENT_SIZE: 3,
   // Position x (Int 16) + Position Z (Int 16)
+  BUFFER_DEATH_EVENT_SIZE: 1,
+  // Event type (INT 8)
   WAYPOINT_SIZE: 4,
   TIME_TO_TIMEOUT: 10000,
 };

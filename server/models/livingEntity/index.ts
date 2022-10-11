@@ -8,7 +8,7 @@ import {
   GridPosition,
   SnapshotLivingEntity,
 } from '~/interfaces';
-import { map as constants, game, locks, network, events } from '~/constants';
+import { map as constants, game, locks, network } from '~/constants';
 import lock from '~/utils/lock';
 import isInRange from '~/utils/isInRange';
 import randomIntFromInterval from '~/utils/randomIntFromInterval';
@@ -133,6 +133,7 @@ export default class LivingEntity {
         return;
       }
       this.health += health;
+      this.health = Math.min(Math.max(0, this.health), this.maxHealth);
       done();
     });
   }
@@ -190,7 +191,7 @@ export default class LivingEntity {
   async updateState() {
     await lock.acquire(locks.ENTITY_STATE + this.id, async (done) => {
       if (this.health <= 0) {
-        this.state = State.DEAD;
+        // Dead state is set elsewhere
         done();
         return;
       }
@@ -767,6 +768,11 @@ export default class LivingEntity {
         done();
         return;
       }
+      if (this.target.state === State.DEAD) {
+        this.target = undefined;
+        done();
+        return;
+      }
       if (
         !Enemy.getActive(this.target.id) &&
         !Player.getActive(this.target.id)
@@ -813,8 +819,11 @@ export default class LivingEntity {
         done();
         return;
       }
+      if (target.state === State.DEAD) {
+        done();
+        return;
+      }
       if (!Enemy.getActive(target.id) && !Player.getActive(target.id)) {
-        this.target = undefined;
         done();
         return;
       }
@@ -822,7 +831,6 @@ export default class LivingEntity {
       // We are ready to start attacking, let's check if we can
       // We check the vision range
       if (!isInRange(this.position, target.position, game.VISION_DISTANCE)) {
-        this.target = undefined;
         done();
         return;
       }
@@ -836,14 +844,17 @@ export default class LivingEntity {
             target.halfColliderExtent,
         )
       ) {
+        console.log('Not in range');
         done();
         return;
       }
       // Then we check the line of sight
       if (!this.isLineOfSightToTargetClear(target)) {
+        console.log('Line of sight not clear');
         done();
         return;
       }
+      console.log('Attack');
       this.target = target;
       this.setTimeForNextAttack(timestamp);
       this.setTimeForAttackToHit(timestamp);
@@ -899,6 +910,15 @@ export default class LivingEntity {
     attacker.addExperience(this.experienceReward);
     lock.acquire(locks.ENTITY_STATE + this.id, (done) => {
       this.state = State.DEAD;
+      done();
+    });
+    const event = new LivingEntityBufferWriter(
+      this,
+      new NetworkMessage(Buffer.alloc(network.BUFFER_DEATH_EVENT_SIZE)),
+    );
+    event.writeDeathEvent();
+    lock.acquire(locks.ENTITY_EVENTS + this.id, (done) => {
+      this.events.push(event.message.buffer);
       done();
     });
   }

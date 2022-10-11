@@ -8,6 +8,7 @@ import isInRange from '~/utils/isInRange';
 import { enemies } from '~/cache';
 
 export default class Enemy extends LivingEntity {
+  timeToDespawn: number = 0;
   lastPathAttackUpdate = 0;
   calculatingNextPath = false;
   nextTimeToMove = 0;
@@ -45,7 +46,17 @@ export default class Enemy extends LivingEntity {
       randomIntFromInterval(-150, 150);
   }
 
+  setTimeToDespawn() {
+    this.timeToDespawn = new Date().getTime() + game.TIME_TO_DESPAWN;
+  }
+
   async update() {
+    if (this.state === State.DEAD) {
+      if (this.timeToDespawn < new Date().getTime()) {
+        this.despawn();
+      }
+      return;
+    }
     await this.ai();
     await super.update();
   }
@@ -168,6 +179,10 @@ export default class Enemy extends LivingEntity {
 
   async die(attacker: LivingEntity) {
     await super.die(attacker);
+    this.setTimeToDespawn();
+  }
+
+  async despawn() {
     enemies.del(this.id);
   }
 }

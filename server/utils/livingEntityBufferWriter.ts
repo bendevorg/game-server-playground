@@ -76,6 +76,10 @@ export default class LivingEntityBufferWriter {
     this.message.writeInt16(this.entity.experience);
   }
 
+  writeDeathEvent() {
+    this.message.writeUInt8(events.DEATH_EVENT);
+  }
+
   writeFullData() {
     this.writePositionUpdateData();
     this.writeLevel();

@@ -3,4 +3,5 @@ export default {
   EXPERIENCE_EVENT: 1,
   ATTACK_EVENT: 2,
   NEW_PATH_EVENT: 3,
+  DEATH_EVENT: 4,
 };
