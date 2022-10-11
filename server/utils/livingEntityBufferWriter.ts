@@ -50,6 +50,10 @@ export default class LivingEntityBufferWriter {
     this.message.writeUInt16(this.entity.attackRange * 100);
   }
 
+  writeAttackSpeed() {
+    this.message.writeUInt16(this.entity.attackSpeed * 100);
+  }
+
   writePathEvent(waypoints: Array<Position>) {
     this.message.writeUInt8(events.NEW_PATH_EVENT);
     this.message.writeUInt8(waypoints.length);
@@ -59,9 +63,9 @@ export default class LivingEntityBufferWriter {
     });
   }
 
-  writeAttackEvent(target: LivingEntity) {
+  writeAttackEvent(attackTarget: LivingEntity) {
     this.message.writeUInt8(events.ATTACK_EVENT);
-    this.message.writeUInt16(target.id);
+    this.message.writeUInt16(attackTarget.id);
   }
 
   writeHitEvent(value: number) {
@@ -88,6 +92,7 @@ export default class LivingEntityBufferWriter {
     this.writeMaxHealth();
     this.writeSpeed();
     this.writeAttackRange();
+    this.writeAttackSpeed();
   }
 
   writePositionUpdateData() {

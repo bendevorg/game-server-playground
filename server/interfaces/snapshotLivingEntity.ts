@@ -9,5 +9,6 @@ export default interface SnapshotLivingEntity {
   maxHealth: number;
   speed: number;
   attackRange: number;
+  attackSpeed: number;
   events: Array<Buffer>;
 }

@@ -56,13 +56,13 @@ export default (input: Buffer, map: Map) => {
         // Between this timestamp and the future tick timestamp
         // TODO: player.move already sets last movement, do we really need this here?
         player.setLastMovement(timestamp);
-        player.setTarget(undefined);
+        player.setAttackTarget(undefined);
         break;
       case actions.ATTACK:
         console.log('Attack action');
-        const targetId = message.popUInt16();
-        const target = Enemy.getActive(targetId);
-        if (!target) {
+        const attackTargetId = message.popUInt16();
+        const attackTarget = Enemy.getActive(attackTargetId);
+        if (!attackTarget) {
           return reject('Invalid target');
         }
         const attackOriginX = message.popInt16();
@@ -81,7 +81,7 @@ export default (input: Buffer, map: Map) => {
           // We should apply the movement between last and this tick before changing to attack
           await player.move(timestamp);
         }
-        player.setupAttack(target, timestamp);
+        player.setupAttack(attackTarget, timestamp);
         break;
       default:
         return reject('Invalid action');

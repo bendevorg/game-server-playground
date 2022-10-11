@@ -31,13 +31,12 @@ export default async (map: Map) => {
       maxHealth: 10,
       speed: 1.5,
       attackRange: 0.25,
-      attackSpeed: 1,
+      attackSpeed: 0.25,
       experienceReward: 1,
       mapId: map.id,
     });
     enemy.setMap(map);
     enemy.save();
-    // }
   }
   return;
 };

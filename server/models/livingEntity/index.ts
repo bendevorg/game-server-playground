@@ -40,7 +40,7 @@ export default class LivingEntity {
   attackRange: number;
   attackSpeed: number;
   experienceReward: number;
-  target?: LivingEntity;
+  attackTarget?: LivingEntity;
   lastUpdate: number;
   lastMovement: number;
   lastAttack: number;
@@ -78,7 +78,7 @@ export default class LivingEntity {
     this.attackSpeed = attackSpeed;
     this.experienceReward = experienceReward;
     this.mapId = mapId;
-    this.target = undefined;
+    this.attackTarget = undefined;
     const now = new Date().getTime();
     this.lastUpdate = now;
     this.lastMovement = now;
@@ -145,16 +145,9 @@ export default class LivingEntity {
     });
   }
 
-  async setPath(target?: LivingEntity) {
-    await lock.acquire(locks.ENTITY_TARGET + this.id, (done) => {
-      this.target = target;
-      done();
-    });
-  }
-
-  async setTarget(target?: LivingEntity) {
-    await lock.acquire(locks.ENTITY_TARGET + this.id, (done) => {
-      this.target = target;
+  async setAttackTarget(attackTarget?: LivingEntity) {
+    await lock.acquire(locks.ENTITY_ATTACK_TARGET + this.id, (done) => {
+      this.attackTarget = attackTarget;
       done();
     });
   }
@@ -178,6 +171,7 @@ export default class LivingEntity {
             maxHealth: this.maxHealth,
             speed: this.speed,
             attackRange: this.attackRange,
+            attackSpeed: this.attackSpeed,
             events: this.events,
           });
           done();
@@ -195,7 +189,7 @@ export default class LivingEntity {
         done();
         return;
       }
-      await lock.acquire(locks.ENTITY_TARGET + this.id, (done) => {
+      await lock.acquire(locks.ENTITY_ATTACK_TARGET + this.id, (done) => {
         this.previousState = this.state;
         const now = new Date().getTime();
         // Attacking
@@ -347,7 +341,7 @@ export default class LivingEntity {
     return start;
   }
 
-  calculatePath(target: Position, range: number = 0) {
+  calculatePath(targetPosition: Position, range: number = 0) {
     return new Promise<void>(async (resolve, reject) => {
       if (!this.map) {
         return reject('Map not set for entity');
@@ -361,7 +355,8 @@ export default class LivingEntity {
         }
         done();
       });
-      const targetGridPosition = this.map.worldPositionToGridPosition(target);
+      const targetGridPosition =
+        this.map.worldPositionToGridPosition(targetPosition);
       const grid = this.map.cloneGrid();
       let start = grid[startGridPosition.row][startGridPosition.column];
       const end = grid[targetGridPosition.row][targetGridPosition.column];
@@ -419,9 +414,9 @@ export default class LivingEntity {
           if (currentNode === end) {
             // Last waypoint's position should be the target
             currentNode.position = {
-              x: target.x,
+              x: targetPosition.x,
               y: currentNode.position.y,
-              z: target.z,
+              z: targetPosition.z,
             };
             // Found it, let's create the path
             while (currentNode.parent) {
@@ -518,7 +513,7 @@ export default class LivingEntity {
       const waypoints = this.calculateWaypoints(nodes);
       const path: Path = {
         startNodePosition: start.position,
-        target,
+        target: targetPosition,
         waypoints,
       };
       await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
@@ -721,7 +716,7 @@ export default class LivingEntity {
   }
 
   async setupMovement(position: Position, timestamp?: number) {
-    this.target = undefined;
+    await this.setAttackTarget(undefined);
     await this.calculatePath(position);
     // This last movement is assigned here so in the next server tick
     // After the path is calculated we will move taking into account the time
@@ -763,21 +758,21 @@ export default class LivingEntity {
   }
 
   async attack() {
-    await lock.acquire(locks.ENTITY_TARGET + this.id, async (done) => {
-      if (!this.target) {
+    await lock.acquire(locks.ENTITY_ATTACK_TARGET + this.id, async (done) => {
+      if (!this.attackTarget) {
         done();
         return;
       }
-      if (this.target.state === State.DEAD) {
-        this.target = undefined;
+      if (this.attackTarget.state === State.DEAD) {
+        this.attackTarget = undefined;
         done();
         return;
       }
       if (
-        !Enemy.getActive(this.target.id) &&
-        !Player.getActive(this.target.id)
+        !Enemy.getActive(this.attackTarget.id) &&
+        !Player.getActive(this.attackTarget.id)
       ) {
-        this.target = undefined;
+        this.attackTarget = undefined;
         done();
         return;
       }
@@ -802,35 +797,40 @@ export default class LivingEntity {
       // From now on the character can move
       const damage = await this.calculateDamage();
       this.setLastAttack();
-      await this.target.takeHit(damage, this);
+      await this.attackTarget.takeHit(damage, this);
       done();
       return;
     });
   }
 
-  async setupAttack(target: LivingEntity, timestamp?: number) {
+  async setupAttack(attackTarget: LivingEntity, timestamp?: number) {
     // If we are attacking we can't have a path
     await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
       this.path = undefined;
       done();
     });
-    await lock.acquire(locks.ENTITY_TARGET + this.id, async (done) => {
-      if (!target) {
+    await lock.acquire(locks.ENTITY_ATTACK_TARGET + this.id, async (done) => {
+      if (!attackTarget) {
         done();
         return;
       }
-      if (target.state === State.DEAD) {
+      if (attackTarget.state === State.DEAD) {
         done();
         return;
       }
-      if (!Enemy.getActive(target.id) && !Player.getActive(target.id)) {
+      if (
+        !Enemy.getActive(attackTarget.id) &&
+        !Player.getActive(attackTarget.id)
+      ) {
         done();
         return;
       }
       // Starting a new attack
       // We are ready to start attacking, let's check if we can
       // We check the vision range
-      if (!isInRange(this.position, target.position, game.VISION_DISTANCE)) {
+      if (
+        !isInRange(this.position, attackTarget.position, game.VISION_DISTANCE)
+      ) {
         done();
         return;
       }
@@ -838,10 +838,10 @@ export default class LivingEntity {
       if (
         !isInRange(
           this.position,
-          target.position,
+          attackTarget.position,
           this.attackRange +
             this.halfColliderExtent +
-            target.halfColliderExtent,
+            attackTarget.halfColliderExtent,
         )
       ) {
         console.log('Not in range');
@@ -849,20 +849,20 @@ export default class LivingEntity {
         return;
       }
       // Then we check the line of sight
-      if (!this.isLineOfSightToTargetClear(target)) {
+      if (!this.isLineOfSightToTargetClear(attackTarget)) {
         console.log('Line of sight not clear');
         done();
         return;
       }
       console.log('Attack');
-      this.target = target;
+      this.attackTarget = attackTarget;
       this.setTimeForNextAttack(timestamp);
       this.setTimeForAttackToHit(timestamp);
       const event = new LivingEntityBufferWriter(
         this,
         new NetworkMessage(Buffer.alloc(network.BUFFER_ATTACK_EVENT_SIZE)),
       );
-      event.writeAttackEvent(this.target);
+      event.writeAttackEvent(this.attackTarget);
       // We don't need to wait to write the event
       lock.acquire(locks.ENTITY_EVENTS + this.id, (done) => {
         this.events.push(event.message.buffer);
