@@ -32,6 +32,7 @@ export default class Player extends LivingEntity {
 
   constructor({
     id,
+    type,
     position,
     level,
     experience,
@@ -47,6 +48,7 @@ export default class Player extends LivingEntity {
   }: PlayerConstructor) {
     super({
       id,
+      type,
       position,
       halfColliderExtent: 0.5,
       level,

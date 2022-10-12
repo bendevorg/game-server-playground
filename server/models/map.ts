@@ -14,6 +14,7 @@ export default class Map {
   // TODO: Update this once we have a proper enemy data format in the map file
   enemies: Array<{
     id: number;
+    type: number;
     amount: number;
     spawnBounds: { minX: number; maxX: number; minZ: number; maxZ: number };
   }>;

@@ -2,12 +2,17 @@ import { LivingEntity, Player } from '../';
 import { State } from '../livingEntity';
 import lock from '~/utils/lock';
 import randomIntFromInterval from '~/utils/randomIntFromInterval';
-import { game, locks } from '~/constants';
-import { Position } from '~/interfaces';
+import { game, locks, behaviours } from '~/constants';
+import { Position, EnemyConstructor } from '~/interfaces';
 import isInRange from '~/utils/isInRange';
 import { enemies } from '~/cache';
+import { enemyCounterByType } from '~/cache/enemies';
 
 export default class Enemy extends LivingEntity {
+  behaviour: number;
+  triggerAgressiveRange: number;
+  inCombat: boolean;
+
   timeToDespawn: number = 0;
   lastPathAttackUpdate = 0;
   calculatingNextPath = false;
@@ -36,6 +41,21 @@ export default class Enemy extends LivingEntity {
     return enemies.keys();
   }
 
+  static getAmountOfActivesByType(type: number): number {
+    return enemyCounterByType[type] || 0;
+  }
+
+  constructor({ behaviour, triggerAgressiveRange, ...args }: EnemyConstructor) {
+    super(args);
+    this.behaviour = behaviour;
+    this.triggerAgressiveRange = triggerAgressiveRange;
+    this.inCombat = false;
+    if (!enemyCounterByType[args.type]) {
+      enemyCounterByType[args.type] = 0;
+    }
+    enemyCounterByType[args.type]++;
+  }
+
   save() {
     if (this.state === State.DEAD) return;
     enemies.set(this.id, this);
@@ -56,6 +76,7 @@ export default class Enemy extends LivingEntity {
   async setEntityToAttack(entityToAttack?: LivingEntity) {
     await lock.acquire(locks.ENEMY_ENTITY_TO_ATTACK + this.id, (done) => {
       this.entityToAttack = entityToAttack;
+      this.inCombat = Boolean(entityToAttack);
       done();
     });
   }
@@ -74,7 +95,7 @@ export default class Enemy extends LivingEntity {
   async ai() {
     const now = new Date().getTime();
     if (this.inBeforeHitAnimation(now)) return;
-    await this.decideOnNewAgressiveTarget();
+    await this.decideOnEntityToAttack();
     if (this.entityToAttack) {
       await this.decideAttackBehaviour();
       return;
@@ -102,7 +123,9 @@ export default class Enemy extends LivingEntity {
     this.moveToRandom();
   }
 
-  async decideOnNewAgressiveTarget() {
+  async decideOnEntityToAttack() {
+    // TODO: Add reactive support
+    if (this.behaviour !== behaviours.AGGRESSIVE) return;
     // If we have a target and it is active + within vision range we continue to try to attack it
     // TODO: We should have a behaviour to change targets based on things like.
     // Another target is closer/doing more damage/doing more healing
@@ -120,14 +143,17 @@ export default class Enemy extends LivingEntity {
       }
       await this.setAttackTarget(undefined);
     }
-    // TODO: Actual AI
     const players = Player.getAllActiveIds();
     if (players.length > 0) {
       const player = Player.getActive(players[0]);
       // TODO: Targeting a new player should be smarter than this
       if (
         player &&
-        isInRange(this.position, player.position, game.VISION_DISTANCE) &&
+        isInRange(
+          this.position,
+          player.position,
+          this.inCombat ? game.VISION_DISTANCE : this.triggerAgressiveRange,
+        ) &&
         player.health > 0
       ) {
         await this.setEntityToAttack(player);
@@ -228,6 +254,14 @@ export default class Enemy extends LivingEntity {
     const distanceZ = this.position.z - this.entityToAttack.position.z;
     const distance = distanceX * distanceX + distanceZ * distanceZ;
     return distance >= this.minimumDistanceForRepath;
+  }
+
+  async takeHit(damage: number, attacker: LivingEntity) {
+    await super.takeHit(damage, attacker);
+    if (this.behaviour === behaviours.PASSIVE) return;
+    // TODO: Has logic to change targets
+    if (this.entityToAttack) return;
+    await this.setEntityToAttack(attacker);
   }
 
   async die(attacker: LivingEntity) {

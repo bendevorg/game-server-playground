@@ -12,3 +12,5 @@ export { default as database } from './database';
 export { default as character } from './character';
 export { default as networkMessage } from './networkMessage';
 export { default as events } from './events';
+export { default as behaviours } from './behaviours';
+export { default as enemies } from './enemies';

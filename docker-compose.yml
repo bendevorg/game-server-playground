@@ -19,7 +19,3 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
-
-# Networks to be created for communication between containers
-networks:
-  backend:

@@ -2,6 +2,7 @@ import { Position } from '.';
 
 export default interface LivingEntityConstructor {
   id: number;
+  type: number;
   position: Position;
   halfColliderExtent: number;
   level: number;

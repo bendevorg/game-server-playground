@@ -16,6 +16,10 @@ export default class LivingEntityBufferWriter {
     this.message.writeUInt16(this.entity.id);
   }
 
+  writeType() {
+    this.message.writeUInt16(this.entity.type);
+  }
+
   writePosition() {
     // We multiply this by a 100 because we store this in a short (int 16) to save space
     // But that doesn't have decimals, so we multiply it here and divide on the client
@@ -85,7 +89,9 @@ export default class LivingEntityBufferWriter {
   }
 
   writeFullData() {
-    this.writePositionUpdateData();
+    this.writeId();
+    this.writeType();
+    this.writePosition();
     this.writeLevel();
     this.writeExperience();
     this.writeHealth();

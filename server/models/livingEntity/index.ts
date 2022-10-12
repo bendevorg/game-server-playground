@@ -27,6 +27,7 @@ export default class LivingEntity {
   previousState: State = State.STAND_BY;
   state: State = State.STAND_BY;
   id: number;
+  type: number;
   position: Position;
   path?: Path;
   halfColliderExtent: number;
@@ -52,6 +53,7 @@ export default class LivingEntity {
 
   constructor({
     id,
+    type,
     position,
     level,
     experience,
@@ -64,6 +66,7 @@ export default class LivingEntity {
     mapId,
   }: LivingEntityConstructor) {
     this.id = id;
+    this.type = type;
     this.position = position;
     // TODO: This will be individual per entity at some point
     this.halfColliderExtent = 0.5;
@@ -164,6 +167,7 @@ export default class LivingEntity {
         lock.acquire(locks.ENTITY_EVENTS + this.id, (done) => {
           resolve({
             id: this.id,
+            type: this.type,
             position: this.position,
             level: this.level,
             experience: this.experience,

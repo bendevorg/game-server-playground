@@ -2,6 +2,7 @@ import { Position } from '.';
 
 export default interface SnapshotLivingEntity {
   id: number;
+  type: number;
   position: Position;
   level: number;
   experience: number;
