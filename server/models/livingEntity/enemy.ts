@@ -149,12 +149,13 @@ export default class Enemy extends LivingEntity {
       // TODO: Targeting a new player should be smarter than this
       if (
         player &&
+        player.health > 0 &&
         isInRange(
           this.position,
           player.position,
           this.inCombat ? game.VISION_DISTANCE : this.triggerAgressiveRange,
         ) &&
-        player.health > 0
+        (this.inCombat || super.isLineOfSightToTargetClear(player))
       ) {
         await this.setEntityToAttack(player);
         return;
