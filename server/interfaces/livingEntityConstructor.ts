@@ -1,4 +1,5 @@
 import { Position } from '.';
+import { Skill } from '~/models';
 
 export default interface LivingEntityConstructor {
   id: number;
@@ -12,6 +13,7 @@ export default interface LivingEntityConstructor {
   speed: number;
   attackRange: number;
   attackSpeed: number;
+  availableSkills: { [key: number]: Skill };
   experienceReward: number;
   mapId: string;
 }

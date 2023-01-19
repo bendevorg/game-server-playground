@@ -72,7 +72,7 @@ export default (input: Buffer, map: Map) => {
           y: 0,
           z: transformShortToFloat(attackOriginZ),
         };
-        // TODO: We should check if the movement is within the vision range
+        // TODO: This should not happen if the player is not ready to attack
         const acceptedSync = await player.attemptToSyncPosition(
           attackOriginPosition,
           timestamp,
@@ -82,6 +82,44 @@ export default (input: Buffer, map: Map) => {
           await player.move(timestamp);
         }
         player.setupAttack(attackTarget, timestamp);
+        break;
+      case actions.SKILL:
+        console.log('Casted skill');
+        const skillId = message.popUInt16();
+        const casterX = message.popInt16();
+        const casterZ = message.popInt16();
+        const casterPosition: Position = {
+          x: transformShortToFloat(casterX),
+          y: 0,
+          z: transformShortToFloat(casterZ),
+        };
+        // TODO: This should not happen if the player is not ready to cast a skill
+        const acceptedCasterSync = await player.attemptToSyncPosition(
+          casterPosition,
+          timestamp,
+        );
+        if (!acceptedCasterSync) {
+          // We should apply the movement between last and this tick before changing to skill cast
+          await player.move(timestamp);
+        }
+        const skillTargetPositionX = message.popInt16();
+        const skillTargetPositionZ = message.popInt16();
+        const skillTargetPosition: Position = {
+          x: transformShortToFloat(skillTargetPositionX),
+          y: 0,
+          z: transformShortToFloat(skillTargetPositionZ),
+        };
+        let skillTarget;
+        if (!message.isFinished()) {
+          const skillTargetId = message.popUInt16();
+          skillTarget = Enemy.getActive(skillTargetId) ?? undefined;
+        }
+        player.setupSkillCast(
+          skillId,
+          skillTargetPosition,
+          skillTarget,
+          timestamp,
+        );
         break;
       default:
         return reject('Invalid action');

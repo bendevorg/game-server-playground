@@ -116,4 +116,8 @@ export default class NetworkMessage {
   resetOffset() {
     this.offset = 0;
   }
+
+  isFinished() {
+    return this.offset === this.buffer.length;
+  }
 }

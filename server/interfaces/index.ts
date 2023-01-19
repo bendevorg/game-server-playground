@@ -10,4 +10,6 @@ export { default as Node } from './node';
 export { default as GridPosition } from './gridPosition';
 export { default as GridLine } from './gridLine';
 export { default as Obstacle } from './obstacle';
+export { default as Skill } from './skill';
+export { default as SkillConstructor } from './skillConstructor';
 export { IModuleDictionary, IStringDictionary } from './common';

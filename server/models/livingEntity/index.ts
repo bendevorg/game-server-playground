@@ -7,6 +7,7 @@ import {
   GridLine,
   GridPosition,
   SnapshotLivingEntity,
+  Skill,
 } from '~/interfaces';
 import { map as constants, game, locks, network } from '~/constants';
 import lock from '~/utils/lock';
@@ -40,6 +41,7 @@ export default class LivingEntity {
   attackMaxDamage: number;
   attackRange: number;
   attackSpeed: number;
+  availableSkills: { [key: number]: Skill };
   experienceReward: number;
   attackTarget?: LivingEntity;
   lastUpdate: number;
@@ -62,6 +64,7 @@ export default class LivingEntity {
     speed,
     attackRange,
     attackSpeed,
+    availableSkills,
     experienceReward,
     mapId,
   }: LivingEntityConstructor) {
@@ -79,6 +82,7 @@ export default class LivingEntity {
     this.attackMaxDamage = 0;
     this.attackRange = attackRange;
     this.attackSpeed = attackSpeed;
+    this.availableSkills = availableSkills;
     this.experienceReward = experienceReward;
     this.mapId = mapId;
     this.attackTarget = undefined;
@@ -761,6 +765,21 @@ export default class LivingEntity {
     return this.timeForAttackToHit > now;
   }
 
+  hasSkill(skillId: number) {
+    return Boolean(this.availableSkills[skillId]);
+  }
+
+  canCastSkill(skillId: number, timestamp?: number) {
+    // TODO: Check if the entity is in a state where it can cast
+    // TODO: Check if the global cooldown for skills
+    const now = timestamp || new Date().getTime();
+    return (
+      this.hasSkill(skillId) &&
+      !this.awaitingForAttackCooldown(now) &&
+      this.availableSkills[skillId].isReadyToCast(timestamp)
+    );
+  }
+
   async attack() {
     await lock.acquire(locks.ENTITY_ATTACK_TARGET + this.id, async (done) => {
       if (!this.attackTarget) {
@@ -829,6 +848,13 @@ export default class LivingEntity {
         done();
         return;
       }
+      // Check if we are not in the middle of an attack already
+      // Note I've added this after a few months of not touching the code
+      // So if something breaks this might be the culprit
+      if (this.awaitingForAttackCooldown(timestamp)) {
+        done();
+        return;
+      }
       // Starting a new attack
       // We are ready to start attacking, let's check if we can
       // We check the vision range
@@ -874,6 +900,24 @@ export default class LivingEntity {
       });
       done();
     });
+  }
+
+  async setupSkillCast(
+    skillId: number,
+    skillPosition: Position,
+    skillTarget?: LivingEntity,
+    timestamp?: number,
+  ) {
+    if (!this.canCastSkill(skillId, timestamp)) {
+      return;
+    }
+    // If we are casting we can't have a path
+    await lock.acquire(locks.ENTITY_PATH + this.id, (done) => {
+      this.path = undefined;
+      done();
+    });
+    const skill = this.availableSkills[skillId];
+    skill.cast(timestamp);
   }
 
   isLineOfSightToTargetClear(target: LivingEntity) {

@@ -28,6 +28,7 @@ export { default as Map } from './map';
 export { default as LivingEntity } from './livingEntity';
 export { default as Player } from './livingEntity/player';
 export { default as Enemy } from './livingEntity/enemy';
+export { default as Skill } from './Skill';
 
 // Associations
 import User from './User';

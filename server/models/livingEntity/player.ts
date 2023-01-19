@@ -1,11 +1,13 @@
 import { Attributes } from 'sequelize';
 import { LivingEntity } from '../';
-import { Character } from '~/models';
+import { Character, Skill } from '~/models';
+import { SkillType } from '~/models/Skill';
 import {
   SnapshotLivingEntity,
   Snapshot,
   PlayerConstructor,
   Position,
+  SkillConstructor,
 } from '~/interfaces';
 import {
   game,
@@ -41,6 +43,7 @@ export default class Player extends LivingEntity {
     speed,
     attackRange,
     attackSpeed,
+    availableSkills,
     mapId,
     ip,
     port,
@@ -58,6 +61,7 @@ export default class Player extends LivingEntity {
       speed,
       attackRange,
       attackSpeed,
+      availableSkills,
       experienceReward: 0,
       mapId,
     });
@@ -71,11 +75,19 @@ export default class Player extends LivingEntity {
     character: Attributes<Character>,
   ): Promise<Player | null> {
     // We first check if a player already exists for this character
-    // I need to check which type we should use for raw
     let player = await Player.get(character.id);
     if (!player) {
       player = new Player({
         ...character,
+        // TODO: This should come from the database
+        availableSkills: {
+          0: new Skill({
+            id: 0,
+            type: SkillType.PROJECTILE,
+            level: 1,
+            cooldownInMs: 5000,
+          }),
+        },
       });
     }
     return player;
@@ -90,7 +102,12 @@ export default class Player extends LivingEntity {
         const jsonPlayerData = await redis.get(key);
         if (jsonPlayerData) {
           const playerData = JSON.parse(jsonPlayerData);
-          player = new Player(playerData);
+          const { availableSkillsData } = playerData;
+          const availableSkills: { [key: number]: Skill } = {};
+          availableSkillsData.forEach((availableSkill: SkillConstructor) => {
+            availableSkills[availableSkill.id] = new Skill(availableSkill);
+          });
+          player = new Player({ ...playerData, availableSkills });
         }
         done();
       });
@@ -126,6 +143,9 @@ export default class Player extends LivingEntity {
       attackSpeed,
       mapId,
     } = this;
+    const availableSkillsData = Object.keys(this.availableSkills).map(
+      (skillId) => this.availableSkills[parseInt(skillId)].getData(),
+    );
     return {
       id,
       position,
@@ -134,6 +154,7 @@ export default class Player extends LivingEntity {
       speed,
       attackRange,
       attackSpeed,
+      availableSkillsData,
       mapId,
     };
   }
