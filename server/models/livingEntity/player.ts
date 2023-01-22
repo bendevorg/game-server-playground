@@ -15,6 +15,7 @@ import {
   redis as redisConstants,
   engine,
   networkMessage,
+  livingEntity as entityConstants,
 } from '~/constants';
 import socket from '~/core/socket';
 import lock from '~/utils/lock';
@@ -35,6 +36,7 @@ export default class Player extends LivingEntity {
     id,
     type,
     position,
+    dimension,
     level,
     experience,
     health,
@@ -52,6 +54,7 @@ export default class Player extends LivingEntity {
       id,
       type,
       position,
+      dimension,
       halfColliderExtent: 0.5,
       level,
       experience,
@@ -78,6 +81,7 @@ export default class Player extends LivingEntity {
     if (!player) {
       player = new Player({
         ...character,
+        dimension: entityConstants.DEFAULT_DIMENSION,
         // TODO: This should come from the database
         // TODO: We should use the ID to find the skill
         availableSkills: {
@@ -133,6 +137,7 @@ export default class Player extends LivingEntity {
     const {
       id,
       position,
+      dimension,
       health,
       maxHealth,
       speed,
@@ -146,6 +151,7 @@ export default class Player extends LivingEntity {
     return {
       id,
       position,
+      dimension,
       health,
       maxHealth,
       speed,

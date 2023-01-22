@@ -2,7 +2,10 @@ import { EnemyConstructor } from '~/interfaces';
 import { behaviours } from '~/constants';
 
 const enemies: {
-  [key: number]: Omit<EnemyConstructor, 'id' | 'type' | 'position' | 'mapId'>;
+  [key: number]: Omit<
+    EnemyConstructor,
+    'id' | 'type' | 'position' | 'dimension' | 'mapId'
+  >;
 } = {
   0: {
     level: 1,

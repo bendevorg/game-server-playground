@@ -1,10 +1,10 @@
-import { Position } from '.';
+import { PhysicalEntityConstructor } from '.';
 import { Skill } from '~/models';
 
-export default interface LivingEntityConstructor {
+export default interface LivingEntityConstructor
+  extends PhysicalEntityConstructor {
   id: number;
   type: number;
-  position: Position;
   halfColliderExtent: number;
   level: number;
   experience: number;

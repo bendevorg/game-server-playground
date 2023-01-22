@@ -1,13 +1,11 @@
 import { LivingEntity } from '~/models';
-import Dimension from './dimension';
 import Direction from './direction';
-import Position from './position';
+import PhysicalEntityConstructor from './physicalEntityConstructor';
 
-export default interface ProjectileConstructor {
+export default interface ProjectileConstructor
+  extends PhysicalEntityConstructor {
   caster: LivingEntity;
-  position: Position;
   speed: number;
-  dimension: Dimension;
   direction: Direction;
   timeToSelfDestroy: number;
 }

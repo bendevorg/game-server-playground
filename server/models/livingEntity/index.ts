@@ -21,6 +21,7 @@ import isInRange from '~/utils/isInRange';
 import randomIntFromInterval from '~/utils/randomIntFromInterval';
 import NetworkMessage from '~/utils/networkMessage';
 import LivingEntityBufferWriter from '~/utils/livingEntityBufferWriter';
+import PhysicalEntity from '~/models/entity/physicalEntity';
 
 export enum State {
   STAND_BY = 0,
@@ -30,12 +31,11 @@ export enum State {
   DEAD = 4,
 }
 
-export default class LivingEntity {
+export default class LivingEntity extends PhysicalEntity {
   previousState: State = State.STAND_BY;
   state: State = State.STAND_BY;
   id: number;
   type: number;
-  position: Position;
   path?: Path;
   halfColliderExtent: number;
   level: number;
@@ -63,7 +63,6 @@ export default class LivingEntity {
   constructor({
     id,
     type,
-    position,
     level,
     experience,
     health,
@@ -74,10 +73,11 @@ export default class LivingEntity {
     availableSkills,
     experienceReward,
     mapId,
+    ...args
   }: LivingEntityConstructor) {
+    super(args);
     this.id = id;
     this.type = type;
-    this.position = position;
     // TODO: This will be individual per entity at some point
     this.halfColliderExtent = 0.5;
     this.level = level;

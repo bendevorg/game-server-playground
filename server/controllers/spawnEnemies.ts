@@ -1,6 +1,9 @@
 import { Enemy, Map } from '~/models';
 import randomFromInterval from '~/utils/randomFromInterval';
-import { enemies as enemiesData } from '~/constants';
+import {
+  enemies as enemiesData,
+  livingEntity as entityConstants,
+} from '~/constants';
 
 // TODO: Thil will be overwritten
 // Starting at 100 so enemy ids doesn't conflict with player ids
@@ -26,6 +29,7 @@ export default async (map: Map) => {
             map.enemies[i].spawnBounds.maxZ,
           ),
         },
+        dimension: entityConstants.DEFAULT_DIMENSION,
         ...enemiesData[map.enemies[i].type],
         mapId: map.id,
       });

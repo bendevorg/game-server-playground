@@ -1,5 +1,6 @@
 export { default as Snapshot } from './snapshot';
 export { default as SnapshotLivingEntity } from './snapshotLivingEntity';
+export { default as PhysicalEntityConstructor } from './physicalEntityConstructor';
 export { default as LivingEntityConstructor } from './livingEntityConstructor';
 export { default as PlayerConstructor } from './playerConstructor';
 export { default as EnemyConstructor } from './enemyConstructor';
