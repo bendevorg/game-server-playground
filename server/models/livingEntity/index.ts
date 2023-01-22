@@ -9,7 +9,13 @@ import {
   SnapshotLivingEntity,
   Skill,
 } from '~/interfaces';
-import { map as constants, game, locks, network } from '~/constants';
+import {
+  map as constants,
+  game,
+  locks,
+  network,
+  livingEntity as entityConstants,
+} from '~/constants';
 import lock from '~/utils/lock';
 import isInRange from '~/utils/isInRange';
 import randomIntFromInterval from '~/utils/randomIntFromInterval';
@@ -49,6 +55,7 @@ export default class LivingEntity {
   lastAttack: number;
   timeForAttackToHit: number;
   timeForNextAttack: number;
+  timeForNextGlobalSkillCooldown: number;
   mapId: string;
   map?: Map;
   events: Array<Buffer>;
@@ -94,6 +101,7 @@ export default class LivingEntity {
     this.lastAttack = now;
     this.timeForAttackToHit = now;
     this.timeForNextAttack = now;
+    this.timeForNextGlobalSkillCooldown = now;
     this.events = [];
     this.updateValues();
   }
@@ -130,6 +138,13 @@ export default class LivingEntity {
     // TODO: Change 1 to be a constant from somewhere
     this.timeForNextAttack =
       (timestamp || new Date().getTime()) + (1 / this.attackSpeed) * 1000;
+  }
+
+  setTimeForNextGlobalSkillCooldown(timestamp?: number) {
+    // TODO: Change 1 to be a constant from somewhere
+    this.timeForNextGlobalSkillCooldown =
+      (timestamp || new Date().getTime()) +
+      entityConstants.SKILL_GLOBAL_COOLDOWN * 1000;
   }
 
   async addHealth(health: number) {
@@ -765,6 +780,11 @@ export default class LivingEntity {
     return this.timeForAttackToHit > now;
   }
 
+  awaitingForGlobalSkillCooldown(timestamp?: number) {
+    const now = timestamp || new Date().getTime();
+    return this.timeForNextGlobalSkillCooldown > now;
+  }
+
   hasSkill(skillId: number) {
     return Boolean(this.availableSkills[skillId]);
   }
@@ -775,7 +795,8 @@ export default class LivingEntity {
     const now = timestamp || new Date().getTime();
     return (
       this.hasSkill(skillId) &&
-      !this.awaitingForAttackCooldown(now) &&
+      !this.inBeforeHitAnimation(now) &&
+      !this.awaitingForGlobalSkillCooldown(now) &&
       this.availableSkills[skillId].isReadyToCast(timestamp)
     );
   }
@@ -917,7 +938,17 @@ export default class LivingEntity {
       done();
     });
     const skill = this.availableSkills[skillId];
-    skill.cast(timestamp);
+    skill.cast(this, skillPosition, skillTarget, timestamp);
+    // const event = new LivingEntityBufferWriter(
+    //   this,
+    //   new NetworkMessage(Buffer.alloc(network.BUFFER_SKILL_EVENT_SIZE)),
+    // );
+    // event.writeSkillEvent(this.attackTarget);
+    // // We don't need to wait to write the event
+    // lock.acquire(locks.ENTITY_EVENTS + this.id, (done) => {
+    //   this.events.push(event.message.buffer);
+    //   done();
+    // });
   }
 
   isLineOfSightToTargetClear(target: LivingEntity) {

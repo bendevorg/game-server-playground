@@ -33,7 +33,7 @@ export default class Enemy extends LivingEntity {
 
   // TODO: Id will be a string eventually
   static getActive(id: number | string): Enemy | null {
-    let enemy: Enemy | undefined = enemies.get<Enemy>(id);
+    const enemy: Enemy | undefined = enemies.get<Enemy>(id);
     return enemy || null;
   }
 

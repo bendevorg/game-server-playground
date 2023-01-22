@@ -10,5 +10,9 @@ export default {
   ENEMY_ENTITY_TO_ATTACK: 'enemy_to_attack-',
   ENTITY_HEALTH: 'health-',
   ENTITY_EXPERIENCE: 'experience-',
+  ENTITY_SKILL: 'skill-',
+  PROJECTILE_ROTATION: 'projectile_rotation-',
+  PROJECTILE_BOUNDS: 'projectile_bounds-',
+  PROJECTILE_POSITION: 'projectile_position-',
   REDIS_PLAYER: 'player-',
 };

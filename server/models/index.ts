@@ -29,6 +29,7 @@ export { default as LivingEntity } from './livingEntity';
 export { default as Player } from './livingEntity/player';
 export { default as Enemy } from './livingEntity/enemy';
 export { default as Skill } from './Skill';
+export { default as Projectile } from './projectile';
 
 // Associations
 import User from './User';

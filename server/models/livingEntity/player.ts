@@ -1,13 +1,12 @@
 import { Attributes } from 'sequelize';
 import { LivingEntity } from '../';
 import { Character, Skill } from '~/models';
-import { SkillType } from '~/models/Skill';
+import { Fireball } from '~/models/Skill/skills';
 import {
   SnapshotLivingEntity,
   Snapshot,
   PlayerConstructor,
   Position,
-  SkillConstructor,
 } from '~/interfaces';
 import {
   game,
@@ -80,12 +79,10 @@ export default class Player extends LivingEntity {
       player = new Player({
         ...character,
         // TODO: This should come from the database
+        // TODO: We should use the ID to find the skill
         availableSkills: {
-          0: new Skill({
-            id: 0,
-            type: SkillType.PROJECTILE,
+          0: new Fireball({
             level: 1,
-            cooldownInMs: 5000,
           }),
         },
       });
@@ -104,8 +101,8 @@ export default class Player extends LivingEntity {
           const playerData = JSON.parse(jsonPlayerData);
           const { availableSkillsData } = playerData;
           const availableSkills: { [key: number]: Skill } = {};
-          availableSkillsData.forEach((availableSkill: SkillConstructor) => {
-            availableSkills[availableSkill.id] = new Skill(availableSkill);
+          availableSkillsData.forEach((availableSkill: Skill) => {
+            availableSkills[availableSkill.id] = new Fireball(availableSkill);
           });
           player = new Player({ ...playerData, availableSkills });
         }

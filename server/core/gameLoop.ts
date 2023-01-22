@@ -2,6 +2,7 @@ import inputQueue from '~/utils/inputQueue';
 import processInput from '~/controllers/processInput';
 import updatePlayerStates from '~/controllers/updatePlayerStates';
 import updateEnemyStates from '~/controllers/updateEnemyStates';
+import updateProjectileStates from '~/controllers/updateProjectileStates';
 import spawnEnemies from '~/controllers/spawnEnemies';
 import lock from '~/utils/lock';
 import { engine, locks } from '~/constants';
@@ -38,6 +39,7 @@ const gameLoop = async (map: Map) => {
     try {
       await updatePlayerStates();
       await updateEnemyStates();
+      await updateProjectileStates();
       spawnEnemies(map);
     } catch (err) {
       console.error(err);

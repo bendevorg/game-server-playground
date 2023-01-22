@@ -14,3 +14,5 @@ export { default as networkMessage } from './networkMessage';
 export { default as events } from './events';
 export { default as behaviours } from './behaviours';
 export { default as enemies } from './enemies';
+export { default as skills } from './skills';
+export { default as livingEntity } from './livingEntity';

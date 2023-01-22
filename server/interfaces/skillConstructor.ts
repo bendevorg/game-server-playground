@@ -1,9 +1,6 @@
 import { SkillType } from '~/models/Skill';
+import SkillTypeConstructor from './skillTypeConstructor';
 
-export default interface SkillConstructor {
-  id: number;
+export default interface SkillConstructor extends SkillTypeConstructor {
   type: SkillType;
-  level: number;
-  cooldownInMs: number;
-  timeForNextCast?: number;
 }

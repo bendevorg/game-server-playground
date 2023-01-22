@@ -1,4 +1,5 @@
-import { SkillConstructor } from '~/interfaces';
+import { SkillConstructor, Position } from '~/interfaces';
+import LivingEntity from '~/models/livingEntity';
 
 export enum SkillType {
   PROJECTILE = 0,
@@ -33,10 +34,15 @@ export default class Skill {
     return now >= this.timeForNextCast;
   }
 
-  cast(timestamp?: number) {
+  async cast(
+    caster: LivingEntity,
+    skillPosition: Position,
+    skillTarget: LivingEntity,
+    timestamp?: number,
+  ) {
     const now = timestamp || new Date().getTime();
     this.timeForNextCast = now + this.cooldownInMs;
-    console.log(`Skill ${this.id} casted`);
+    console.log(`Skill ${this.id} casted by ${caster.id}`);
   }
 
   getData() {
