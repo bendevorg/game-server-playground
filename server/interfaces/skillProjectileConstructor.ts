@@ -6,4 +6,5 @@ export default interface SkillProjectileConstructor
   speed: number;
   dimension: Dimension;
   lifeSpanInMs: number;
+  collisionMask: number;
 }

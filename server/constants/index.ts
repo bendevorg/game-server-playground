@@ -16,3 +16,4 @@ export { default as behaviours } from './behaviours';
 export { default as enemies } from './enemies';
 export { default as skills } from './skills';
 export { default as livingEntity } from './livingEntity';
+export { default as collisionMask } from './collisionMask';

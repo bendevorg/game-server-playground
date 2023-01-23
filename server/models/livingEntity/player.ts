@@ -82,13 +82,14 @@ export default class Player extends LivingEntity {
       player = new Player({
         ...character,
         dimension: entityConstants.DEFAULT_DIMENSION,
+      });
+      player.setAvailableSkills({
         // TODO: This should come from the database
         // TODO: We should use the ID to find the skill
-        availableSkills: {
-          0: new Fireball({
-            level: 1,
-          }),
-        },
+        0: new Fireball({
+          caster: player,
+          level: 1,
+        }),
       });
     }
     return player;
@@ -105,10 +106,15 @@ export default class Player extends LivingEntity {
           const playerData = JSON.parse(jsonPlayerData);
           const { availableSkillsData } = playerData;
           const availableSkills: { [key: number]: Skill } = {};
+          player = new Player({ ...playerData });
           availableSkillsData.forEach((availableSkill: Skill) => {
-            availableSkills[availableSkill.id] = new Fireball(availableSkill);
+            // TODO: Get skill based of the id instead of having fireball fixed here
+            availableSkills[availableSkill.id] = new Fireball({
+              ...availableSkill,
+              // @ts-ignore
+              caster: player,
+            });
           });
-          player = new Player({ ...playerData, availableSkills });
         }
         done();
       });
@@ -122,6 +128,17 @@ export default class Player extends LivingEntity {
 
   static getAllActiveIds(): Array<string> {
     return players.keys();
+  }
+
+  static getAllActive(): Array<Player> {
+    const ids = Player.getAllActiveIds();
+    const activePlayers: Array<Player> = [];
+    ids.forEach((id) => {
+      const activePlayer = Player.getActive(id);
+      if (!activePlayer) return;
+      activePlayers.push(activePlayer);
+    });
+    return activePlayers;
   }
 
   async save(cacheOnly: boolean = false, ignoreCache: boolean = false) {

@@ -7,30 +7,37 @@ export default class SkillProjectile extends Skill {
   speed: number;
   dimension: Dimension;
   lifeSpanInMs: number;
+  collisionMask: number;
 
   constructor({
     speed,
     dimension,
     lifeSpanInMs,
+    collisionMask,
     ...args
   }: SkillProjectileConstructor) {
     super({ ...args, type: SkillType.PROJECTILE });
     this.speed = speed;
     this.dimension = dimension;
     this.lifeSpanInMs = lifeSpanInMs;
+    this.collisionMask = collisionMask;
+  }
+
+  async onHit(entity: LivingEntity) {
+    // TODO: This should call the skill's callback
+    entity.takeHit(5, this.caster);
   }
 
   async cast(
-    caster: LivingEntity,
     skillPosition: Position,
     skillTarget: LivingEntity,
     timestamp?: number,
   ) {
     const now = timestamp || new Date().getTime();
-    await super.cast(caster, skillPosition, skillTarget, now);
+    await super.cast(skillPosition, skillTarget, now);
     const unormalizedDirection = {
-      x: skillPosition.x - caster.position.x,
-      z: skillPosition.z - caster.position.z,
+      x: skillPosition.x - this.caster.position.x,
+      z: skillPosition.z - this.caster.position.z,
     };
     const magnitude = Math.sqrt(
       unormalizedDirection.x * unormalizedDirection.x +
@@ -42,14 +49,17 @@ export default class SkillProjectile extends Skill {
     };
     // Spawn projectile
     const projectile = new Projectile({
-      caster,
+      caster: this.caster,
       speed: this.speed,
-      position: caster.position,
+      // TODO: Get a better position
+      position: this.caster.position,
       direction,
       dimension: this.dimension,
+      collisionMask: this.collisionMask,
       timeToSelfDestroy: now + this.lifeSpanInMs,
+      onHit: this.onHit,
     });
     projectile.save();
-    console.log(`Projectile ${this.id} casted by ${caster.id}`);
+    console.log(`Projectile ${this.id} casted by ${this.caster.id}`);
   }
 }

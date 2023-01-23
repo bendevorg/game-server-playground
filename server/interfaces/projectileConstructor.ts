@@ -7,5 +7,7 @@ export default interface ProjectileConstructor
   caster: LivingEntity;
   speed: number;
   direction: Direction;
+  collisionMask: number;
   timeToSelfDestroy: number;
+  onHit: (entity: LivingEntity) => void;
 }

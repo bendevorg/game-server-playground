@@ -1,8 +1,8 @@
-import Projectile from '~/models/Skill/skillProjectile';
+import SkillProjectile from '~/models/Skill/skillProjectile';
 import { SkillIndividualConstructor } from '~/interfaces';
-import { skills as skillsConstants } from '~/constants';
+import { collisionMask, skills as skillsConstants } from '~/constants';
 
-export default class Fireball extends Projectile {
+export default class Fireball extends SkillProjectile {
   constructor({ ...args }: SkillIndividualConstructor) {
     super({
       ...args,
@@ -11,6 +11,8 @@ export default class Fireball extends Projectile {
       speed: skillsConstants.FIREBALL_SPEED,
       dimension: skillsConstants.FIREBALL_DIMENSION,
       lifeSpanInMs: skillsConstants.FIREBALL_LIFE_SPAN_IN_MS,
+      // TODO: Add support for enemy / pvp casts
+      collisionMask: collisionMask.ENEMIES | collisionMask.OBSTACLES,
     });
   }
 }

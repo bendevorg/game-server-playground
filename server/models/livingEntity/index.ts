@@ -70,7 +70,7 @@ export default class LivingEntity extends PhysicalEntity {
     speed,
     attackRange,
     attackSpeed,
-    availableSkills,
+    availableSkills = {},
     experienceReward,
     mapId,
     ...args
@@ -147,8 +147,12 @@ export default class LivingEntity extends PhysicalEntity {
       entityConstants.SKILL_GLOBAL_COOLDOWN * 1000;
   }
 
+  setAvailableSkills(availableSkills: { [key: number]: Skill }) {
+    this.availableSkills = availableSkills;
+  }
+
   async addHealth(health: number) {
-    await lock.acquire(locks.ENTITY_HEALTH + this, (done) => {
+    await lock.acquire(locks.ENTITY_HEALTH + this.id, (done) => {
       // We can't add health to a dead entity
       if (this.health <= 0) {
         done();
@@ -161,7 +165,7 @@ export default class LivingEntity extends PhysicalEntity {
   }
 
   async addExperience(experience: number) {
-    await lock.acquire(locks.ENTITY_EXPERIENCE + this, (done) => {
+    await lock.acquire(locks.ENTITY_EXPERIENCE + this.id, (done) => {
       this.experience += experience;
       done();
     });
@@ -178,6 +182,7 @@ export default class LivingEntity extends PhysicalEntity {
     this.updateState();
     await this.attack();
     await this.move();
+    await super.recalculateBounds(this.id);
   }
 
   retrieveSnapshotData() {
@@ -938,7 +943,7 @@ export default class LivingEntity extends PhysicalEntity {
       done();
     });
     const skill = this.availableSkills[skillId];
-    skill.cast(this, skillPosition, skillTarget, timestamp);
+    skill.cast(skillPosition, skillTarget, timestamp);
     // const event = new LivingEntityBufferWriter(
     //   this,
     //   new NetworkMessage(Buffer.alloc(network.BUFFER_SKILL_EVENT_SIZE)),

@@ -9,6 +9,7 @@ export enum SkillType {
 
 export default class Skill {
   id: number;
+  caster: LivingEntity;
   type: SkillType;
   level: number;
   cooldownInMs: number;
@@ -16,12 +17,14 @@ export default class Skill {
 
   constructor({
     id,
+    caster,
     type,
     level,
     cooldownInMs,
     timeForNextCast,
   }: SkillConstructor) {
     this.id = id;
+    this.caster = caster;
     this.type = type;
     this.level = level;
     this.cooldownInMs = cooldownInMs;
@@ -35,14 +38,13 @@ export default class Skill {
   }
 
   async cast(
-    caster: LivingEntity,
     skillPosition: Position,
     skillTarget: LivingEntity,
     timestamp?: number,
   ) {
     const now = timestamp || new Date().getTime();
     this.timeForNextCast = now + this.cooldownInMs;
-    console.log(`Skill ${this.id} casted by ${caster.id}`);
+    console.log(`Skill ${this.id} casted by ${this.caster.id}`);
   }
 
   getData() {

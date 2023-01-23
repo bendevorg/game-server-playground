@@ -41,6 +41,17 @@ export default class Enemy extends LivingEntity {
     return enemies.keys();
   }
 
+  static getAllActive(): Array<Enemy> {
+    const ids = Enemy.getAllActiveIds();
+    const activeEnemies: Array<Enemy> = [];
+    ids.forEach((id) => {
+      const activeEnemy = Enemy.getActive(id);
+      if (!activeEnemy) return;
+      activeEnemies.push(activeEnemy);
+    });
+    return activeEnemies;
+  }
+
   static getAmountOfActivesByType(type: number): number {
     return enemyCounterByType[type] || 0;
   }

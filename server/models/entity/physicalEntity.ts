@@ -6,7 +6,9 @@ import {
   Direction,
 } from '~/interfaces';
 import lock from '~/utils/lock';
-import { locks } from '~/constants';
+import { locks, collisionMask as collisionMaskConstants } from '~/constants';
+import { players, enemies } from '~/cache';
+import LivingEntity from '../livingEntity';
 
 // Used for all entities that can are affected by physics (like collisions)
 export default class PhysicalEntity {
@@ -26,14 +28,14 @@ export default class PhysicalEntity {
         x: 0,
         z: 0,
       },
-      topRight: {
-        x: 0,
-        z: 0,
-      },
-      bottomLeft: {
-        x: 0,
-        z: 0,
-      },
+      // topRight: {
+      //   x: 0,
+      //   z: 0,
+      // },
+      // bottomLeft: {
+      //   x: 0,
+      //   z: 0,
+      // },
       bottomRight: {
         x: 0,
         z: 0,
@@ -90,22 +92,22 @@ export default class PhysicalEntity {
             this.position.z +
             (left * Math.sin(this.rotation) + top * Math.cos(this.rotation)),
         },
-        topRight: {
-          x:
-            this.position.x +
-            (right * Math.cos(this.rotation) - top * Math.sin(this.rotation)),
-          z:
-            this.position.z +
-            (right * Math.sin(this.rotation) + top * Math.cos(this.rotation)),
-        },
-        bottomLeft: {
-          x:
-            this.position.x +
-            (left * Math.cos(this.rotation) - bottom * Math.sin(this.rotation)),
-          z:
-            this.position.z +
-            (left * Math.sin(this.rotation) + bottom * Math.cos(this.rotation)),
-        },
+        // topRight: {
+        //   x:
+        //     this.position.x +
+        //     (right * Math.cos(this.rotation) - top * Math.sin(this.rotation)),
+        //   z:
+        //     this.position.z +
+        //     (right * Math.sin(this.rotation) + top * Math.cos(this.rotation)),
+        // },
+        // bottomLeft: {
+        //   x:
+        //     this.position.x +
+        //     (left * Math.cos(this.rotation) - bottom * Math.sin(this.rotation)),
+        //   z:
+        //     this.position.z +
+        //     (left * Math.sin(this.rotation) + bottom * Math.cos(this.rotation)),
+        // },
         bottomRight: {
           x:
             this.position.x +
@@ -121,5 +123,80 @@ export default class PhysicalEntity {
     });
   }
 
-  async checkForCollisions() {}
+  distanceAgainstOtherPosition(position: Position) {
+    const distanceX = this.position.x - position.x;
+    const distanceZ = this.position.z - position.z;
+    return distanceX * distanceX + distanceZ * distanceZ;
+  }
+
+  // TODO: Check obstacles
+  async checkForFirstCollision(
+    collisionMask: number,
+  ): Promise<[boolean, LivingEntity | undefined]> {
+    return new Promise<[boolean, LivingEntity | undefined]>(
+      (resolve, reject) => {
+        let collided = false;
+        // TODO: We need to use the distance between the rectangles and not the center point
+        // I don't know how to do this yet so I am using the center point
+        let closestDistance = Infinity;
+        let collidedWith: LivingEntity | undefined = undefined;
+        // Can't use the Player/Enemy classes here for the `getAllActive` function
+        // Because that creates a circular dependency
+        if (collisionMask & collisionMaskConstants.ENEMIES) {
+          console.log('Check collision against enemies');
+          const ids = enemies.keys();
+          ids.forEach((id) => {
+            const activeEntity = enemies.get<LivingEntity>(id);
+            if (!activeEntity) return;
+            if (!this.collidesWithBounds(activeEntity.bounds)) return;
+            collided = true;
+            const distance = this.distanceAgainstOtherPosition(
+              activeEntity.position,
+            );
+            if (distance >= closestDistance) return;
+            collidedWith = activeEntity;
+            closestDistance = distance;
+          });
+        }
+        // TODO: Remove duplicated code
+        if (collisionMask & collisionMaskConstants.PLAYERS) {
+          const ids = players.keys();
+          ids.forEach((id) => {
+            const activeEntity = players.get<LivingEntity>(id);
+            if (!activeEntity) return;
+            if (!this.collidesWithBounds(activeEntity.bounds)) return;
+            collided = true;
+            const distance = this.distanceAgainstOtherPosition(
+              activeEntity.position,
+            );
+            if (distance >= closestDistance) return;
+            collidedWith = activeEntity;
+            closestDistance = distance;
+          });
+        }
+        if (collisionMask & collisionMaskConstants.OBSTACLES) {
+        }
+        return resolve([collided, collidedWith]);
+      },
+    );
+  }
+
+  async collidesWithBounds(otherBounds: Bounds) {
+    // If one rectangle is on right side of other
+    if (
+      this.bounds.topLeft.x > otherBounds.bottomRight.x ||
+      otherBounds.topLeft.x > this.bounds.bottomRight.x
+    ) {
+      return false;
+    }
+
+    // If one rectangle is above other
+    if (
+      this.bounds.bottomRight.z > otherBounds.topLeft.z ||
+      otherBounds.bottomRight.z > this.bounds.topLeft.z
+    ) {
+      return false;
+    }
+    return true;
+  }
 }
