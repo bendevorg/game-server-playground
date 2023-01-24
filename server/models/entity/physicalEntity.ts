@@ -40,6 +40,10 @@ export default class PhysicalEntity {
         x: 0,
         z: 0,
       },
+      topmost: 0,
+      bottommost: 0,
+      leftmost: 0,
+      rightmost: 0,
     };
     this.oldBounds = { ...this.bounds };
     this.rotation = 0;
@@ -83,15 +87,28 @@ export default class PhysicalEntity {
       this.oldBounds = { ...this.bounds };
       // Rotating points: https://en.wikipedia.org/wiki/Rotation_matrix
       // Each point is calculate as pivot (position) + rotated point
+      const topLeft = {
+        x:
+          this.position.x +
+          (left * Math.cos(this.rotation) - top * Math.sin(this.rotation)),
+        z:
+          this.position.z +
+          (left * Math.sin(this.rotation) + top * Math.cos(this.rotation)),
+      };
+      const bottomRight = {
+        x:
+          this.position.x +
+          (right * Math.cos(this.rotation) - bottom * Math.sin(this.rotation)),
+        z:
+          this.position.z +
+          (right * Math.sin(this.rotation) + bottom * Math.cos(this.rotation)),
+      };
+      const topmost = topLeft.z > bottomRight.z ? topLeft.z : bottomRight.z;
+      const bottommost = topLeft.z < bottomRight.z ? topLeft.z : bottomRight.z;
+      const rightmost = topLeft.x > bottomRight.x ? topLeft.x : bottomRight.x;
+      const leftmost = topLeft.x < bottomRight.x ? topLeft.x : bottomRight.x;
       this.bounds = {
-        topLeft: {
-          x:
-            this.position.x +
-            (left * Math.cos(this.rotation) - top * Math.sin(this.rotation)),
-          z:
-            this.position.z +
-            (left * Math.sin(this.rotation) + top * Math.cos(this.rotation)),
-        },
+        topLeft,
         // topRight: {
         //   x:
         //     this.position.x +
@@ -108,16 +125,11 @@ export default class PhysicalEntity {
         //     this.position.z +
         //     (left * Math.sin(this.rotation) + bottom * Math.cos(this.rotation)),
         // },
-        bottomRight: {
-          x:
-            this.position.x +
-            (right * Math.cos(this.rotation) -
-              bottom * Math.sin(this.rotation)),
-          z:
-            this.position.z +
-            (right * Math.sin(this.rotation) +
-              bottom * Math.cos(this.rotation)),
-        },
+        bottomRight,
+        topmost,
+        bottommost,
+        leftmost,
+        rightmost,
       };
       done();
     });
@@ -181,19 +193,19 @@ export default class PhysicalEntity {
     );
   }
 
-  async collidesWithBounds(otherBounds: Bounds) {
+  collidesWithBounds(otherBounds: Bounds) {
     // If one rectangle is on right side of other
     if (
-      this.bounds.topLeft.x > otherBounds.bottomRight.x ||
-      otherBounds.topLeft.x > this.bounds.bottomRight.x
+      this.bounds.leftmost > otherBounds.rightmost ||
+      otherBounds.leftmost > this.bounds.rightmost
     ) {
       return false;
     }
 
     // If one rectangle is above other
     if (
-      this.bounds.bottomRight.z > otherBounds.topLeft.z ||
-      otherBounds.bottomRight.z > this.bounds.topLeft.z
+      this.bounds.bottommost > otherBounds.topmost ||
+      otherBounds.bottommost > this.bounds.topmost
     ) {
       return false;
     }

@@ -874,13 +874,14 @@ export default class LivingEntity extends PhysicalEntity {
         done();
         return;
       }
-      // Check if we are not in the middle of an attack already
-      // Note I've added this after a few months of not touching the code
-      // So if something breaks this might be the culprit
-      if (this.awaitingForAttackCooldown(timestamp)) {
-        done();
-        return;
-      }
+      // If we don't check for this you can start attacking before waiting for the attack cooldown
+      // To finish. However due to the front-backend desync the user might to attack again before the backend
+      // processed the previous attack. For now let's not check for this. But at some time we should
+      // And we coul probably clean this if the user moves after an attack
+      // if (this.awaitingForAttackCooldown(timestamp)) {
+      //   done();
+      //   return;
+      // }
       // Starting a new attack
       // We are ready to start attacking, let's check if we can
       // We check the vision range

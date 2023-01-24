@@ -115,6 +115,7 @@ export default class Player extends LivingEntity {
               caster: player,
             });
           });
+          player.setAvailableSkills(availableSkills);
         }
         done();
       });
