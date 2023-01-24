@@ -90,6 +90,8 @@ export default class Projectile extends PhysicalEntity {
     );
     if (collided) {
       if (collidedWith) {
+        console.log('Projectile bounds', this.bounds);
+        console.log('Collided with bounds', collidedWith.bounds);
         this.onHit(collidedWith);
       }
       await this.destroy();
